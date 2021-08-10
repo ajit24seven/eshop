@@ -1,0 +1,25 @@
+.userNav {
+	width: 280px;
+	margin: 10px 10px 0 10px;
+	position: relative;
+	border-top: 1px solid #dedede;
+	flex: none !important;
+	& > div {
+		height: 100%;
+		.avatar {
+			padding: 20px;
+			height: 60px;
+			display: flex;
+			align-items: center;
+		}
+
+		.menu {
+			position: absolute;
+			top: 0;
+			bottom: 0;
+			overflow: auto;
+			width: 100%;
+			margin-top: 101px;
+		}
+	}
+}

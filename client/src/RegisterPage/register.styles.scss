@@ -1,0 +1,17 @@
+.register {
+	padding-top: 100px;
+	background: url(../_assets/login-background.png) right bottom no-repeat;
+	background-size: contain;
+	height: calc(100vh - 170px);
+
+	h6 {
+		margin-bottom: 10px;
+	}
+	.MuiInput-root {
+		margin-bottom: 20px;
+	}
+
+	.MuiButton-root {
+		margin-bottom: 10px;
+	}
+}
