@@ -4,7 +4,7 @@ const HistoryPage = () => {
 	return (
 		<>
 			<UserNav></UserNav>
-			<main>scdss</main>
+			<main>ddd</main>
 		</>
 	);
 };
