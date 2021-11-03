@@ -28,16 +28,18 @@ function App() {
 				const response = await userService.currentUser(
 					idTokenResult.token
 				);
-				const { name, email, role, _id } = response.data;
-				dispatch(
-					userActions.success({
-						email,
-						name,
-						role,
-						_id,
-						token: idTokenResult.token,
-					})
-				);
+				if (response && response.data) {
+					const { name, email, role, _id } = response.data;
+					dispatch(
+						userActions.success({
+							email,
+							name,
+							role,
+							_id,
+							token: idTokenResult.token,
+						})
+					);
+				}
 			}
 		});
 		return () => unsubscribe;
@@ -88,5 +90,4 @@ function App() {
 		</Fragment>
 	);
 }
-
 export default App;

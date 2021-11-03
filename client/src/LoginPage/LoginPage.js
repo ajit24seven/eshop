@@ -12,8 +12,8 @@ import { userActions } from '../_actions';
 import './login.styles.scss';
 
 function LoginPage({ history }) {
-	const [email, setEmail] = useState('bedaxod882@advew.com');
-	const [password, setPassword] = useState('`1234567');
+	const [email, setEmail] = useState('difisec548@cyadp.com');
+	const [password, setPassword] = useState('`123456');
 	const dispatch = useDispatch();
 	const { authentication } = useSelector((state) => ({ ...state }));
 	window.localStorage.removeItem('isLoggedIn');

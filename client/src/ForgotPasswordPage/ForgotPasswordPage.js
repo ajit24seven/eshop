@@ -9,7 +9,7 @@ import { toasterActions } from '../_actions';
 import { userService } from '../_services';
 
 const ForgotPasswordPage = () => {
-	const [email, setEmail] = useState('bedaxod882@advew.com');
+	const [email, setEmail] = useState('difisec548@cyadp.com');
 	const [loading, setLoading] = useState(false);
 	const dispatch = useDispatch();
 
