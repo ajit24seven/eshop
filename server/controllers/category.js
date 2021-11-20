@@ -5,34 +5,62 @@ exports.create = async (req, res, next) => {
 	try {
 		const { name } = req.body;
 		const dbCategory = await Category.findOne({ name });
-		if (dbCategory) return res.status(400).send('category already exist');
+		if (dbCategory) return res.status(400).send('Category already exist');
 
-		const category = new Category({
+		const category = await new Category({
 			name,
-			slugify: slugify(name),
-		});
+			slug: slugify(name),
+		}).save();
 
-		category.save((error, res) => {
-			if (error) return res.status(400).send('an error occurred', error);
-			res.status(200).send({ message: 'category was created' });
-		});
+		res.json(category);
 	} catch (error) {
-		res.status(400).send('an error occurred', error);
+		res.status(400).send('An error occurred', error);
 	}
 };
 exports.list = async (req, res, next) => {
 	try {
-	} catch (error) {}
+		const categories = await Category.find({})
+			.sort({ createdAt: -1 })
+			.exec();
+		res.json(categories);
+	} catch (error) {
+		res.status(500).send('An error occurred', error);
+	}
 };
 exports.read = async (req, res, next) => {
 	try {
-	} catch (error) {}
+		const { slug } = req.params;
+		const category = await Category.findOne({ slug }).exec();
+		res.json(category);
+	} catch (error) {
+		res.status(500).send('an error occurred', error);
+	}
 };
 exports.update = async (req, res, next) => {
 	try {
-	} catch (error) {}
+		const { name } = req.body;
+		const { slug } = req.params;
+
+		const category = await Category.findOneAndUpdate(
+			{ slug },
+			{ name, slug: slugify(name) },
+			{ new: true }
+		);
+		res.json(category);
+	} catch (error) {
+		res.status(400).send('Updation failed', error);
+	}
 };
 exports.remove = async (req, res, next) => {
 	try {
-	} catch (error) {}
+		const { slug } = req.params;
+
+		const dbCategory = await Category.findOne({ slug });
+		if (!dbCategory) return res.status(400).send('Category does not exist');
+
+		const category = await Category.findOneAndDelete({ slug });
+		res.json(category);
+	} catch (error) {
+		res.status(400).send('Deletion failed', error);
+	}
 };

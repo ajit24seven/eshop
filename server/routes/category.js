@@ -8,10 +8,10 @@ const {
 	list,
 } = require('../controllers/category');
 
-router.post('/category', authz, adminCheck, create);
-router.get('/cagegories', list);
-router.get('/category/:id', authz, adminCheck, read);
-router.put('/category/:id', authz, adminCheck, update);
-router.delete('/category/:id', authz, adminCheck, remove);
+router.post('/category', authz, create);
+router.get('/categories', list);
+router.get('/category/:slug', read);
+router.put('/category/:slug', authz, adminCheck, update);
+router.delete('/category/:slug', authz, adminCheck, remove);
 
 module.exports = router;

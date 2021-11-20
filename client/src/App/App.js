@@ -17,6 +17,8 @@ import { PrivateRoute, UserRoute, AdminRoute } from '../_components/';
 import PasswordUpdatePage from '../PasswordUpdatePage';
 import WishListPage from '../WishListPage';
 import AdminDashboard from '../AdminDashboard';
+import CategoryPage from '../CategoryPage';
+import Grid from '@mui/material/Grid';
 
 function App() {
 	const dispatch = useDispatch();
@@ -51,41 +53,52 @@ function App() {
 
 			<Toaster></Toaster>
 			<div className='container'>
-				<Switch>
-					<Route exact path='/' component={HomePage} />
-					<PrivateRoute exact path='/login' comp={LoginPage} />
-					<PrivateRoute exact path='/register' comp={RegisterPage} />
-					<PrivateRoute
-						exact
-						path='/register/complete'
-						comp={RegisterCompletePage}
-					/>
-					<PrivateRoute
-						exact
-						path='/forgot/password'
-						comp={ForgotPasswordPage}
-					/>
-					<UserRoute
-						exact
-						path='/user/history'
-						component={HistoryPage}
-					/>
-					<UserRoute
-						exact
-						path='/user/password'
-						component={PasswordUpdatePage}
-					/>
-					<UserRoute
-						exact
-						path='/user/wishlist'
-						component={WishListPage}
-					/>
-					<AdminRoute
-						exact
-						path='/admin/dashboard'
-						component={AdminDashboard}
-					/>
-				</Switch>
+				<Grid container spacing={5}>
+					<Switch>
+						<Route exact path='/' component={HomePage} />
+						<PrivateRoute exact path='/login' comp={LoginPage} />
+						<PrivateRoute
+							exact
+							path='/register'
+							comp={RegisterPage}
+						/>
+						<PrivateRoute
+							exact
+							path='/register/complete'
+							comp={RegisterCompletePage}
+						/>
+						<PrivateRoute
+							exact
+							path='/forgot/password'
+							comp={ForgotPasswordPage}
+						/>
+						<UserRoute
+							exact
+							path='/user/history'
+							component={HistoryPage}
+						/>
+						<UserRoute
+							exact
+							path='/user/password'
+							component={PasswordUpdatePage}
+						/>
+						<UserRoute
+							exact
+							path='/user/wishlist'
+							component={WishListPage}
+						/>
+						<AdminRoute
+							exact
+							path='/admin/dashboard'
+							component={AdminDashboard}
+						/>
+						<AdminRoute
+							exact
+							path='/admin/category'
+							component={CategoryPage}
+						/>
+					</Switch>
+				</Grid>
 			</div>
 		</Fragment>
 	);

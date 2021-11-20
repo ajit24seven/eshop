@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import './header.styles.scss';
 import logo from '../_assets/flipkart-logo.png';
-import AppBar from '@material-ui/core/AppBar';
-import IconButton from '@material-ui/core/IconButton';
-import PersonAdd from '@material-ui/icons/PersonAdd';
-import Person from '@material-ui/icons/Person';
-import Button from '@material-ui/core/Button';
-import Menu from '@material-ui/core/Menu';
-import AccountCircle from '@material-ui/icons/AccountCircle';
-import MenuItem from '@material-ui/core/MenuItem';
+import AppBar from '@mui/material/AppBar';
+import IconButton from '@mui/material/IconButton';
+import PersonAdd from '@mui/icons-material/PersonAdd';
+import Person from '@mui/icons-material/Person';
+import Button from '@mui/material/Button';
+import Menu from '@mui/material/Menu';
+import AccountCircle from '@mui/icons-material/AccountCircle';
+import MenuItem from '@mui/material/MenuItem';
 import { useDispatch, useSelector } from 'react-redux';
 import { userService } from '../_services';
 import { useHistory } from 'react-router-dom';
@@ -90,12 +90,25 @@ export const Header = () => {
 								open={Boolean(anchorEl)}
 								onClose={handleClose}
 							>
-								<MenuItem onClick={handleClose}>
-									Profile
-								</MenuItem>
-								<MenuItem onClick={handleClose}>
-									My account
-								</MenuItem>
+								{user && user.role === 'subscriber' && (
+									<MenuItem
+										component={Link}
+										onClick={handleClose}
+										to='/user/history'
+									>
+										Dashboard
+									</MenuItem>
+								)}
+								{user && user.role === 'admin' && (
+									<MenuItem
+										component={Link}
+										onClick={handleClose}
+										to='/admin/dashboard'
+									>
+										Dashboard
+									</MenuItem>
+								)}
+
 								<MenuItem onClick={logout}>Logout</MenuItem>
 							</Menu>
 						</div>
