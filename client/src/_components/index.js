@@ -4,3 +4,7 @@ export * from './redirect.component';
 export * from './private.route';
 export * from './user.route';
 export * from './admin.route';
+export * from './select.component';
+export * from './modal.component';
+export * from './loading-button.component';
+export * from './tree-view.component';

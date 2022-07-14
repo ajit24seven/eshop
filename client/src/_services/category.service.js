@@ -1,50 +1,40 @@
 import axios from 'axios';
 
+const baseUrl = process.env.REACT_APP_API_BASE_PATH;
+
 const getCategories = () => {
-	return axios.get(process.env.REACT_APP_API_BASE_PATH + '/categories');
+	return axios.get(baseUrl + '/categories');
 };
 
 const getCategory = (slug) => {
-	return axios.get(process.env.REACT_APP_API_BASE_PATH + '/category/' + slug);
+	return axios.get(baseUrl + '/categories/' + slug);
 };
 
-const createCategory = (categoryName, authToken) => {
-	return axios.post(
-		process.env.REACT_APP_API_BASE_PATH + '/category',
-		{
-			name: categoryName,
+const createCategory = (data, authToken) => {
+	return axios.post(baseUrl + '/categories', data, {
+		headers: {
+			authToken: authToken,
 		},
-		{
-			headers: {
-				authToken: authToken,
-			},
-		}
-	);
+	});
 };
 
-const updateCategory = (slug, categoryName, authToken) => {
-	return axios.put(
-		process.env.REACT_APP_API_BASE_PATH + '/category/' + slug,
-		{
-			name: categoryName,
+const updateCategory = (slug, data, authToken) => {
+	return axios.put(baseUrl + '/categories/' + slug, data, {
+		headers: {
+			authToken: authToken,
 		},
-		{
-			headers: {
-				authToken: authToken,
-			},
-		}
-	);
+	});
 };
 
-const removeCategory = (slug, authToken) => {
-	return axios.delete(
-		process.env.REACT_APP_API_BASE_PATH + '/category/' + slug,
-		{
-			headers: {
-				authToken: authToken,
-			},
-		}
-	);
+const removeCategory = (slug, id, authToken) => {
+	return axios.delete(baseUrl + '/categories/' + slug, {
+		headers: {
+			authToken: authToken,
+		},
+		data: {
+			id,
+		},
+	});
 };
 
 export const categoryService = {

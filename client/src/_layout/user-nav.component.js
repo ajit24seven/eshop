@@ -2,9 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import MenuItem from '@mui/material/MenuItem';
 import MenuList from '@mui/material/MenuList';
-import Divider from '@mui/material/Divider';
 import Paper from '@mui/material/Paper';
-import Avatar from '@mui/material/Avatar';
 
 import './user-nav.styles.scss';
 

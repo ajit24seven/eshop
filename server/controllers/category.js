@@ -1,33 +1,64 @@
 const Category = require('../models/category');
 const slugify = require('slugify');
+const ErrorHandler = require('../util/errorHandler');
 
-exports.create = async (req, res, next) => {
-	try {
-		const { name } = req.body;
-		const dbCategory = await Category.findOne({ name });
-		if (dbCategory) return res.status(400).send('Category already exist');
+function buildCategory(categories, parentId = null) {
+	const categoryList = [];
+	let category;
 
-		const category = await new Category({
-			name,
-			slug: slugify(name),
-		}).save();
-
-		res.json(category);
-	} catch (error) {
-		res.status(400).send('An error occurred', error);
+	if (parentId == null) {
+		category = categories.filter(
+			(cat) => cat.parentId === undefined || cat.parentId === ''
+		);
+	} else {
+		category = categories.filter((cat) => cat.parentId === parentId);
 	}
+
+	for (let cat of category) {
+		categoryList.push({
+			_id: cat._id,
+			name: cat.name,
+			slug: cat.slug,
+			children: buildCategory(categories, cat._id.toString()),
+		});
+	}
+
+	return categoryList;
+}
+
+exports.createProducts = async (req, res, next) => {
+	const { name, parentId } = req.body;
+	if (name === '') {
+		return next(new ErrorHandler('Name is required', 400));
+	}
+	const dbCategory = await Category.findOne({ name });
+	if (dbCategory) return res.status(400).send('Category already exist');
+
+	const category = await new Category({
+		name,
+		slug: slugify(name),
+		parentId,
+	}).save();
+
+	res.json({ success: true, category: category });
 };
-exports.list = async (req, res, next) => {
+
+exports.getAllProducts = async (req, res, next) => {
 	try {
 		const categories = await Category.find({})
 			.sort({ createdAt: -1 })
 			.exec();
-		res.json(categories);
+
+		if (categories) {
+			const categoryList = buildCategory(categories);
+			res.json({ categories, categoryList });
+		}
 	} catch (error) {
 		res.status(500).send('An error occurred', error);
 	}
 };
-exports.read = async (req, res, next) => {
+
+exports.getProductDetails = async (req, res, next) => {
 	try {
 		const { slug } = req.params;
 		const category = await Category.findOne({ slug }).exec();
@@ -36,14 +67,14 @@ exports.read = async (req, res, next) => {
 		res.status(500).send('an error occurred', error);
 	}
 };
-exports.update = async (req, res, next) => {
+exports.updateProduct = async (req, res, next) => {
 	try {
-		const { name } = req.body;
+		const { name, parentId } = req.body;
 		const { slug } = req.params;
 
 		const category = await Category.findOneAndUpdate(
 			{ slug },
-			{ name, slug: slugify(name) },
+			{ name, slug: slugify(name), parentId },
 			{ new: true }
 		);
 		res.json(category);
@@ -51,10 +82,26 @@ exports.update = async (req, res, next) => {
 		res.status(400).send('Updation failed', error);
 	}
 };
-exports.remove = async (req, res, next) => {
+
+exports.deleteProduct = async (req, res, next) => {
 	try {
 		const { slug } = req.params;
+		const { id } = req.body;
 
+		const hasChildren = await Category.findOne({
+			parentId: id,
+		}).exec();
+
+		if (hasChildren) {
+			return next(
+				new ErrorHandler(
+					'Please remove sub categories befor removing the parent',
+					400
+				)
+			);
+		}
+
+		console.log(hasChildren);
 		const dbCategory = await Category.findOne({ slug });
 		if (!dbCategory) return res.status(400).send('Category does not exist');
 

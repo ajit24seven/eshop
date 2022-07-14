@@ -1,17 +1,17 @@
 const router = require('express').Router();
 const { authz, adminCheck } = require('../middlewares/authz');
 const {
-	create,
-	read,
-	update,
-	remove,
-	list,
+	getAllProducts,
+	createProducts,
+	getProductDetails,
+	updateProduct,
+	deleteProduct,
 } = require('../controllers/category');
 
-router.post('/category', authz, create);
-router.get('/categories', list);
-router.get('/category/:slug', read);
-router.put('/category/:slug', authz, adminCheck, update);
-router.delete('/category/:slug', authz, adminCheck, remove);
+router.post('/categories', authz, adminCheck, createProducts);
+router.get('/categories', getAllProducts);
+router.get('/categories/:slug', getProductDetails);
+router.put('/categories/:slug', updateProduct);
+router.delete('/categories/:slug', deleteProduct);
 
 module.exports = router;
