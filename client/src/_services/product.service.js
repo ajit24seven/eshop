@@ -1,49 +1,27 @@
-import axios from 'axios';
-
-const baseUrl = process.env.REACT_APP_API_BASE_PATH;
+import { httpClient } from '../_helpers';
 
 const getProducts = () => {
-	return axios.get(baseUrl + '/products');
+	return httpClient.get('/products');
 };
 
 const getProduct = (slug) => {
-	return axios.get(baseUrl + '/products/' + slug);
+	return httpClient.get('/products/' + slug);
 };
 
-const createProduct = (categoryName, authToken) => {
-	return axios.post(
-		baseUrl + '/products',
-		{
-			name: categoryName,
-		},
-		{
-			headers: {
-				authToken: authToken,
-			},
-		}
-	);
-};
-
-const updateProduct = (slug, categoryName, authToken) => {
-	return axios.put(
-		baseUrl + '/products/' + slug,
-		{
-			name: categoryName,
-		},
-		{
-			headers: {
-				authToken: authToken,
-			},
-		}
-	);
-};
-
-const removeProduct = (slug, authToken) => {
-	return axios.delete(baseUrl + '/products/' + slug, {
-		headers: {
-			authToken: authToken,
-		},
+const createProduct = (categoryName) => {
+	return httpClient.post('/products', {
+		name: categoryName,
 	});
+};
+
+const updateProduct = (slug, categoryName) => {
+	return httpClient.put('/products/' + slug, {
+		name: categoryName,
+	});
+};
+
+const removeProduct = (slug) => {
+	return httpClient.delete('/products/' + slug);
 };
 
 export const productService = {

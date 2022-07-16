@@ -24,7 +24,6 @@ function AdminCategoryPage() {
 	const [category, setCategory] = useState('');
 
 	const dispatch = useDispatch();
-	const { user } = useSelector((state) => ({ ...state.authentication }));
 	const categories = useSelector((state) => ({
 		...state.categories,
 	}));
@@ -44,7 +43,7 @@ function AdminCategoryPage() {
 				name: name,
 				parentId: category,
 			};
-			await categoryService.createCategory(data, user.token);
+			await categoryService.createCategory(data);
 			setFormSubmitted(true);
 			setLoading(false);
 			dispatch(toasterActions.success(`Category successfully added`));
@@ -58,7 +57,7 @@ function AdminCategoryPage() {
 	const handleRemoveCategory = async (e, slug, parentId) => {
 		e.preventDefault();
 		try {
-			await categoryService.removeCategory(slug, parentId, user.token);
+			await categoryService.removeCategory(slug, parentId);
 			dispatch(toasterActions.error(`Category successfully deleted`));
 			setLoading(false);
 			resetStates();
@@ -76,7 +75,7 @@ function AdminCategoryPage() {
 			parentId: category,
 		};
 		categoryService
-			.updateCategory(slug, data, user.token)
+			.updateCategory(slug, data)
 			.then((res) => {
 				setLoading(false);
 				resetStates();

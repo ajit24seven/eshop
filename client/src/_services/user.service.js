@@ -11,6 +11,8 @@ const login = async (email, password) => {
 		const { user } = authResult;
 		const idTokenResult = await user.getIdTokenResult();
 		const response = await createOrUpdateUser(idTokenResult.token);
+		window.localStorage.setItem('isLoggedIn', true);
+		window.localStorage.setItem('accessToken', idTokenResult.token);
 		return {
 			user: response.data,
 			token: idTokenResult.token,
@@ -27,6 +29,8 @@ const googleLogin = async () => {
 		const idTokenResult = await user.getIdTokenResult();
 
 		const response = await createOrUpdateUser(idTokenResult.token);
+		window.localStorage.setItem('isLoggedIn', true);
+		window.localStorage.setItem('accessToken', idTokenResult.token);
 		return {
 			user: response.data,
 			token: idTokenResult.token,
@@ -39,6 +43,7 @@ const googleLogin = async () => {
 const logout = () => {
 	firebase.auth().signOut();
 	window.localStorage.removeItem('isLoggedIn');
+	window.localStorage.removeItem('accessToken');
 };
 
 const register = async (email) => {
@@ -68,6 +73,8 @@ const completeRegistration = async (email, password) => {
 			await user.updatePassword(password);
 			const idTokenResult = await user.getIdTokenResult();
 			const response = await createOrUpdateUser(idTokenResult.token);
+			window.localStorage.setItem('isLoggedIn', true);
+			window.localStorage.setItem('accessToken', idTokenResult.token);
 			return {
 				user: response.data,
 				token: idTokenResult.token,

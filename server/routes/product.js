@@ -9,9 +9,9 @@ const {
 } = require('../controllers/product');
 
 router.post('/products', authz, adminCheck, _create);
-router.get('/products', _getAll);
-router.get('/products/:slug', _getOne);
-router.put('/products/:slug', _update);
-router.delete('/products/:slug', _delete);
+router.get('/products', authz, _getAll);
+router.get('/products/:slug', authz, _getOne);
+router.put('/products/:slug', authz, _update);
+router.delete('/products/:slug', authz, _delete);
 
 module.exports = router;

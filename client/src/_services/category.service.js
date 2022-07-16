@@ -1,36 +1,23 @@
-import axios from 'axios';
-
-const baseUrl = process.env.REACT_APP_API_BASE_PATH;
+import { httpClient } from '../_helpers';
 
 const getCategories = () => {
-	return axios.get(baseUrl + '/categories');
+	return httpClient.get('/categories');
 };
 
 const getCategory = (slug) => {
-	return axios.get(baseUrl + '/categories/' + slug);
+	return httpClient.get('/categories/' + slug);
 };
 
-const createCategory = (data, authToken) => {
-	return axios.post(baseUrl + '/categories', data, {
-		headers: {
-			authToken: authToken,
-		},
-	});
+const createCategory = (data) => {
+	return httpClient.post('/categories', data);
 };
 
-const updateCategory = (slug, data, authToken) => {
-	return axios.put(baseUrl + '/categories/' + slug, data, {
-		headers: {
-			authToken: authToken,
-		},
-	});
+const updateCategory = (slug, data) => {
+	return httpClient.put('/categories/' + slug, data);
 };
 
-const removeCategory = (slug, id, authToken) => {
-	return axios.delete(baseUrl + '/categories/' + slug, {
-		headers: {
-			authToken: authToken,
-		},
+const removeCategory = (slug, id) => {
+	return httpClient.delete('/categories/' + slug, {
 		data: {
 			id,
 		},

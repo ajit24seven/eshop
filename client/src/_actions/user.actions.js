@@ -80,7 +80,6 @@ function loginWithEmailAndPassword(email, password) {
 						token: response.token,
 					})
 				);
-				window.localStorage.setItem('isLoggedIn', true);
 			},
 			(error) => {
 				dispatch(failure(error.message));
@@ -104,7 +103,6 @@ function loginWithGoogle() {
 						token: response.token,
 					})
 				);
-				window.localStorage.setItem('isLoggedIn', true);
 			},
 			(error) => {
 				dispatch(failure(error.message));
