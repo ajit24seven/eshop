@@ -31,11 +31,14 @@ class TableComponent extends LitElement {
     this.data = [];
   }
 
-  // Manipulate column JSON before rendering
+  // Manipulate column JSON based on row data before rendering
   firstUpdated() {
-    // Example: Manipulate columns (add or remove based on some condition)
-    if (this.columns.length > 3) {
-      this.columns = this.columns.slice(0, 3);  // Limit to first 3 columns
+    if (this.data.length > 0) {
+      const firstRow = this.data[0];
+      this.columns = Object.keys(firstRow).map(key => ({
+        header: key.toUpperCase(),
+        field: key
+      }));
     }
   }
 
