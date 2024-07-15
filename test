@@ -1,0 +1,25 @@
+import { html, fixture, expect } from '@open-wc/testing';
+import './table-component.js';
+
+describe('TableComponent', () => {
+  it('renders empty table when no data is provided', async () => {
+    const el = await fixture(html`<table-component></table-component>`);
+    expect(el.shadowRoot.querySelector('table')).to.exist;
+    expect(el.shadowRoot.querySelector('tbody').children.length).to.equal(0);
+  });
+
+  it('renders table with columns and data correctly', async () => {
+    const columns = [{ header: 'Name', field: 'name' }, { header: 'Age', field: 'age' }];
+    const data = [{ name: 'Alice', age: 30 }, { name: 'Bob', age: 25 }];
+
+    const el = await fixture(html`
+      <table-component .columns=${columns} .data=${data}></table-component>
+    `);
+
+    expect(el.shadowRoot.querySelector('table')).to.exist;
+    const rows = el.shadowRoot.querySelectorAll('tbody tr');
+    expect(rows.length).to.equal(2);
+    expect(rows[0].querySelector('td').textContent).to.equal('Alice');
+    expect(rows[1].querySelector('td').textContent).to.equal('25'); // Assuming 'age' field
+  });
+});
