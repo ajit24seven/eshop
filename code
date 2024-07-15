@@ -1,0 +1,71 @@
+import { LitElement, html, css } from 'lit-element';
+
+class TableComponent extends LitElement {
+  static get properties() {
+    return {
+      columns: { type: Array },  // Array of column definitions
+      data: { type: Array }      // Array of row data
+    };
+  }
+
+  static get styles() {
+    return css`
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th, td {
+        border: 1px solid black;
+        padding: 8px;
+        text-align: left;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+    `;
+  }
+
+  constructor() {
+    super();
+    this.columns = [];
+    this.data = [];
+  }
+
+  // Manipulate column JSON before rendering
+  firstUpdated() {
+    // Example: Manipulate columns (add or remove based on some condition)
+    if (this.columns.length > 3) {
+      this.columns = this.columns.slice(0, 3);  // Limit to first 3 columns
+    }
+  }
+
+  renderTableHeader() {
+    return html`
+      <tr>
+        ${this.columns.map(column => html`<th>${column.header}</th>`)}
+      </tr>
+    `;
+  }
+
+  renderTableRow(row) {
+    return html`
+      <tr>
+        ${this.columns.map(column => html`<td>${row[column.field]}</td>`)}
+      </tr>
+    `;
+  }
+
+  render() {
+    return html`
+      <table>
+        <thead>${this.renderTableHeader()}</thead>
+        <tbody>
+          ${this.data.map(row => this.renderTableRow(row))}
+        </tbody>
+      </table>
+    `;
+  }
+}
+
+customElements.define('table-component', TableComponent);
+export { TableComponent };
