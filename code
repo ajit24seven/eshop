@@ -301,3 +301,120 @@ describe('ApiController', () => {
   });
 });
 
+====
+import { describe, it, expect, vi } from 'vitest';
+import axios from 'axios';
+import { ApiController } from './ApiController.js';
+import { Task } from 'lit';
+
+// Mock axios
+vi.mock('axios');
+
+// Create a mock host
+const mockHost = {
+  addController: vi.fn(),
+  removeController: vi.fn(),
+};
+
+describe('ApiController', () => {
+  it('should initialize with the correct URL', () => {
+    const url = '/test-url';
+    const apiController = new ApiController(mockHost, url);
+    expect(apiController.url).toBe(url);
+  });
+
+  it('should handle successful data fetch', async () => {
+    const url = '/test-url';
+    const mockData = { data: [{ name: 'Item 1' }] };
+    axios.get.mockResolvedValue(mockData);
+
+    const apiController = new ApiController(mockHost, url);
+    await apiController.task.run();
+
+    expect(apiController.data).toEqual(mockData.data);
+    expect(apiController.state).toBe('fulfilled');
+  });
+
+  it('should handle failed data fetch', async () => {
+    const url = '/test-url';
+    const mockError = new Error('Network Error');
+    axios.get.mockRejectedValue(mockError);
+
+    const apiController = new ApiController(mockHost, url);
+    await expect(apiController.task.run()).rejects.toThrow(mockError);
+    expect(apiController.state).toBe('rejected');
+    expect(apiController.error).toEqual(mockError);
+  });
+
+  it('should handle request cancellation', async () => {
+    const url = '/test-url';
+    axios.get.mockImplementation(() => {
+      throw axios.Cancel('Request canceled');
+    });
+
+    const apiController = new ApiController(mockHost, url);
+    await expect(apiController.task.run()).rejects.toThrow('Request canceled');
+    expect(apiController.state).toBe('rejected');
+  });
+
+  it('should call abortController.abort on disconnection', () => {
+    const url = '/test-url';
+    const apiController = new ApiController(mockHost, url);
+
+    apiController.hostDisconnected();
+
+    // Check if abortController.abort was called
+    expect(apiController.abortController.abort).toHaveBeenCalled();
+  });
+});
+===
+import { describe, it, expect, vi } from 'vitest';
+import axios from 'axios';
+import axiosInstance from './axiosWrapper.js';
+
+// Mock axios
+vi.mock('axios');
+
+describe('Axios Wrapper', () => {
+  it('should create axios instance with default configuration', () => {
+    expect(axiosInstance.defaults.baseURL).toBe('https://api.example.com');
+    expect(axiosInstance.defaults.timeout).toBe(1000);
+  });
+
+  it('should handle request interceptor', async () => {
+    const mockRequest = vi.fn(config => config);
+    axiosInstance.interceptors.request.use = mockRequest;
+
+    // Simulate an API call
+    await axiosInstance.get('/test-endpoint');
+
+    expect(mockRequest).toHaveBeenCalled();
+  });
+
+  it('should handle response interceptor', async () => {
+    const mockResponse = { data: 'response data' };
+    axiosInstance.interceptors.response.use = vi.fn(response => response);
+
+    axios.get.mockResolvedValue(mockResponse);
+
+    const response = await axiosInstance.get('/test-endpoint');
+
+    expect(response).toEqual(mockResponse);
+  });
+
+  it('should handle request cancellation', async () => {
+    const mockCancel = new axios.Cancel('Request canceled');
+    axiosInstance.isCancel = vi.fn(error => error.message === 'Request canceled');
+
+    const error = new axios.Cancel('Request canceled');
+    
+    expect(axiosInstance.isCancel(error)).toBe(true);
+  });
+
+  it('should handle errors properly', async () => {
+    const mockError = new Error('Network Error');
+    axios.get.mockRejectedValue(mockError);
+
+    await expect(axiosInstance.get('/test-endpoint')).rejects.toThrow('Network Error');
+  });
+});
