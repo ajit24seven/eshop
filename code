@@ -127,3 +127,177 @@ export class DataFetcher extends LitElement {
 
 customElements.define('data-fetcher', DataFetcher);
 
+========
+
+import axios from 'axios';
+import axiosInstance from './axiosWrapper.js';
+
+// Mock axios
+jest.mock('axios');
+
+describe('Axios Wrapper', () => {
+  test('should create axios instance with default configuration', () => {
+    expect(axiosInstance.defaults.baseURL).toBe('https://api.example.com');
+    expect(axiosInstance.defaults.timeout).toBe(1000);
+  });
+
+  test('should handle request interceptor', async () => {
+    const mockRequest = jest.fn(config => config);
+    axiosInstance.interceptors.request.use = mockRequest;
+
+    // Simulate an API call
+    await axiosInstance.get('/test-endpoint');
+
+    expect(mockRequest).toHaveBeenCalled();
+  });
+
+  test('should handle response interceptor', async () => {
+    const mockResponse = { data: 'response data' };
+    axiosInstance.interceptors.response.use = jest.fn(response => response);
+
+    axios.get.mockResolvedValue(mockResponse);
+
+    const response = await axiosInstance.get('/test-endpoint');
+
+    expect(response).toEqual(mockResponse);
+  });
+
+  test('should handle request cancellation', async () => {
+    const mockCancel = new axios.Cancel('Request canceled');
+    axiosInstance.isCancel = jest.fn(error => error.message === 'Request canceled');
+
+    const error = new axios.Cancel('Request canceled');
+    
+    expect(axiosInstance.isCancel(error)).toBe(true);
+  });
+
+  test('should handle errors properly', async () => {
+    const mockError = new Error('Network Error');
+    axios.get.mockRejectedValue(mockError);
+
+    await expect(axiosInstance.get('/test-endpoint')).rejects.toThrow('Network Error');
+  });
+});
+
+===========
+import { html, LitElement } from 'lit';
+import { fixture, html as litHtml } from '@open-wc/testing';
+import './DataFetcher.js'; // Ensure the path is correct
+
+class MockApiController extends LitElement {
+  constructor() {
+    super();
+    this.url = '';
+    this.data = [];
+    this.state = 'idle';
+  }
+
+  async run() {
+    this.state = 'pending';
+    // Simulate data fetching
+    setTimeout(() => {
+      this.data = [{ name: 'Item 1' }];
+      this.state = 'fulfilled';
+      this.requestUpdate();
+    }, 100);
+  }
+}
+
+customElements.define('mock-api-controller', MockApiController);
+
+describe('DataFetcher', () => {
+  test('should render loading state', async () => {
+    const el = await fixture(html`<data-fetcher 
+      url="/test-url"
+      .renderItem=${data => litHtml`<div>${data.map(item => html`<p>${item.name}</p>`)}</div>`}
+    ></data-fetcher>`);
+
+    // Set up a mock controller to simulate loading
+    const mockController = el.apiController;
+    mockController.state = 'pending';
+    await el.updateComplete;
+
+    expect(el.shadowRoot.querySelector('p').textContent).toBe('Loading...');
+  });
+
+  test('should render data', async () => {
+    const el = await fixture(html`<data-fetcher 
+      url="/test-url"
+      .renderItem=${data => litHtml`<div>${data.map(item => html`<p>${item.name}</p>`)}</div>`}
+    ></data-fetcher>`);
+
+    // Set up a mock controller to simulate data fetching
+    const mockController = el.apiController;
+    mockController.state = 'fulfilled';
+    mockController.data = [{ name: 'Item 1' }];
+    await el.updateComplete;
+
+    expect(el.shadowRoot.querySelector('p').textContent).toBe('Item 1');
+  });
+
+  test('should render error state', async () => {
+    const el = await fixture(html`<data-fetcher 
+      url="/test-url"
+      .renderItem=${data => litHtml`<div>${data.map(item => html`<p>${item.name}</p>`)}</div>`}
+    ></data-fetcher>`);
+
+    // Set up a mock controller to simulate an error
+    const mockController = el.apiController;
+    mockController.state = 'rejected';
+    mockController.error = new Error('Network Error');
+    await el.updateComplete;
+
+    expect(el.shadowRoot.querySelector('p').textContent).toBe('Error: Network Error');
+  });
+});
+==========
+import { ApiController } from './ApiController.js';
+import axios from 'axios';
+import { Task } from 'lit';
+import { mock } from 'jest-mock-extended';
+
+// Mock axios
+jest.mock('axios');
+
+describe('ApiController', () => {
+  let apiController;
+  const url = '/test-url';
+  const host = mock();
+
+  beforeEach(() => {
+    apiController = new ApiController(host, url);
+  });
+
+  test('should initialize with correct URL', () => {
+    expect(apiController.url).toBe(url);
+  });
+
+  test('should handle successful data fetch', async () => {
+    const mockData = { data: [{ name: 'Item 1' }] };
+    axios.get.mockResolvedValue(mockData);
+
+    await apiController.task.run();
+
+    expect(apiController.data).toEqual(mockData.data);
+    expect(apiController.state).toBe('fulfilled');
+  });
+
+  test('should handle failed data fetch', async () => {
+    const mockError = new Error('Network Error');
+    axios.get.mockRejectedValue(mockError);
+
+    await expect(apiController.task.run()).rejects.toThrow(mockError);
+    expect(apiController.state).toBe('rejected');
+    expect(apiController.error).toEqual(mockError);
+  });
+
+  test('should handle request cancellation', async () => {
+    axios.get.mockImplementation(() => {
+      throw axios.Cancel('Request canceled');
+    });
+
+    await expect(apiController.task.run()).rejects.toThrow('Request canceled');
+    expect(apiController.state).toBe('rejected');
+  });
+});
+
