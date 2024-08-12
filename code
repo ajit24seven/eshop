@@ -47,3 +47,83 @@ export class ApiController extends ReactiveController {
     this.abortController.abort();
   }
 }
+
+
+====
+
+import axios from 'axios';
+
+// Create an instance of axios with default configuration
+const axiosInstance = axios.create({
+  baseURL: 'https://api.example.com', // Set your base URL here
+  timeout: 10000, // Set a timeout if needed
+});
+
+// Request interceptor to handle any global request settings
+axiosInstance.interceptors.request.use(
+  config => {
+    // Add any request configuration here (e.g., authentication tokens)
+    return config;
+  },
+  error => {
+    // Handle request errors
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor to handle global response settings
+axiosInstance.interceptors.response.use(
+  response => response,
+  error => {
+    // Handle response errors
+    if (axios.isCancel(error)) {
+      return Promise.reject(new Error('Request canceled'));
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Export the axios instance for use in other modules
+export default axiosInstance;
+========
+
+import { LitElement, html, css, property } from 'lit';
+import { ApiController } from './ApiController.js';
+
+export class DataFetcher extends LitElement {
+  @property({ type: String }) url = '';
+  @property({ type: Function }) renderItem = () => html``; // Default render function
+
+  constructor() {
+    super();
+    this.apiController = null;
+  }
+
+  updated(changedProperties) {
+    super.updated(changedProperties);
+    if (changedProperties.has('url')) {
+      this.apiController = new ApiController(this, this.url);
+    }
+  }
+
+  render() {
+    if (!this.apiController) {
+      return html`<p>Please provide a URL.</p>`;
+    }
+
+    const { data, error, state } = this.apiController;
+
+    if (state === 'pending') {
+      return html`<p>Loading...</p>`;
+    }
+
+    if (state === 'rejected') {
+      return html`<p>Error: ${error.message}</p>`;
+    }
+
+    return this.renderItem(data);
+  }
+}
+
+customElements.define('data-fetcher', DataFetcher);
+
