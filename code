@@ -1,3 +1,41 @@
+import { fixture, html } from '@open-wc/testing';
+import './entity-information.js'; // Adjust this import to the actual path of your component
+
+describe('EntityInformation', () => {
+  let element;
+
+  beforeEach(async () => {
+    // Mocking the necessary data
+    global.entityInfoList = [
+      { header: 'Name', property: 'name', col: 4 },
+      { header: 'Age', property: 'age', col: 4 },
+    ];
+
+    global.entityInfoListData = {
+      name: 'John Doe',
+      age: 30,
+    };
+
+    element = await fixture(html`<kyx-entity-information></kyx-entity-information>`);
+  });
+
+  it('renders correctly', () => {
+    const gridContainer = element.shadowRoot.querySelector('sc-grid-container');
+    expect(gridContainer).to.exist;
+
+    const gridRow = gridContainer.querySelector('sc-grid-row');
+    expect(gridRow).to.exist;
+
+    const columns = gridRow.querySelectorAll('sc-grid-column');
+    expect(columns.length).to.equal(global.entityInfoList.length);
+
+    columns.forEach((column, index) => {
+      const expectedText = `${global.entityInfoList[index].header} ${global.entityInfoListData[global.entityInfoList[index].property]}`;
+      expect(column.textContent.trim()).to.equal(expectedText);
+    });
+  });
+});
+
 import { ReactiveController, ReactiveControllerHost } from 'lit';
 import axiosInstance from './axiosWrapper.js';
 import { Task } from 'lit';
