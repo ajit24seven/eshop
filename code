@@ -1,4 +1,53 @@
+import { html, fixture, expect } from '@open-wc/testing';
+import './entity-information';
+import { EntityInformation } from './entity-information';
+import { IEntitiyInfoList } from './entity-information.config'; // Assuming this is where the interface is defined
 
+describe('EntityInformation Component', () => {
+
+  let element: EntityInformation;
+
+  beforeEach(async () => {
+    element = await fixture<EntityInformation>(html`<kyx-entity-information></kyx-entity-information>`);
+  });
+
+  it('should initialize with empty entityInfoList', () => {
+    expect(element.entityInfoList).to.be.an('array').that.is.empty;
+  });
+
+  it('should render the page title correctly', () => {
+    const titleElement = element.shadowRoot!.querySelector('div');
+    expect(titleElement!.textContent).to.equal('Entity Information');
+  });
+
+  it('should correctly map entityInfoList to displayEntityList', async () => {
+    const mockEntityInfoList: IEntitiyInfoList[] = [
+      { header: 'Header1', property: 'Value1', col: 4 },
+      { header: 'Header2', property: 'Value2', col: 4 }
+    ];
+
+    element.entityInfoList = mockEntityInfoList;
+    await element.updateComplete;  // Wait for the update cycle to complete
+
+    const gridColumns = element.shadowRoot!.querySelectorAll('sc-grid-column');
+    expect(gridColumns.length).to.equal(2);
+    expect(gridColumns[0].textContent).to.contain('Header1');
+    expect(gridColumns[1].textContent).to.contain('Header2');
+  });
+
+  it('should update entityInfoListData when entityInfoList is changed', async () => {
+    const mockEntityInfoList: IEntitiyInfoList[] = [
+      { header: 'Header1', property: 'Value1', col: 4 },
+      { header: 'Header2', property: 'Value2', col: 4 }
+    ];
+
+    element.entityInfoList = mockEntityInfoList;
+    await element.updateComplete;
+
+    expect(element.entityInfoListData).to.deep.equal(mockEntityInfoList);
+  });
+
+});
 import { html, fixture, expect } from '@open-wc/testing';
 import './entity-information.js'; // Import the component
 
