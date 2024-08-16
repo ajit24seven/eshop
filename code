@@ -1,3 +1,80 @@
+
+import { LitElement, html, css } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
+import { IEntitiyInfoList } from './entity-information.config';
+
+@customElement('kyx-entity-information')
+export class EntityInformation extends LitElement {
+  
+  @state()
+  private entityInfoList: IEntitiyInfoList[] = [];
+
+  @state()
+  private entityInfoListData: IEntitiyInfoList[] = [];
+
+  static styles = css`
+    /* Add your custom styles or import CSS modules here */
+    /* Example:
+    :host {
+      display: block;
+      padding: 16px;
+    }
+    */
+  `;
+
+  // Lifecycle method that runs after the first render
+  firstUpdated() {
+    this.initializeEntityInfo();
+  }
+
+  // Method to initialize or update the entity information list
+  private initializeEntityInfo() {
+    // Simulate an API call or some logic to populate the list
+    const initialData: IEntitiyInfoList[] = [
+      { header: 'Header1', property: 'Value1', col: 4 },
+      { header: 'Header2', property: 'Value2', col: 4 },
+    ];
+
+    this.entityInfoList = initialData;
+    this.entityInfoListData = [...this.entityInfoList]; // Spread syntax ensures a new reference
+  }
+
+  // Method to render the page title
+  private renderPageTitle(title: string) {
+    return html`<h1>${title}</h1>`;
+  }
+
+  // Method to display the entity list
+  private displayEntityList() {
+    return this.entityInfoList.map(item => html`
+      <sc-grid-column md="${item.col}">
+        ${this.renderEntityItem(item.header, item.property)}
+      </sc-grid-column>
+    `);
+  }
+
+  // Method to render individual entity items
+  private renderEntityItem(header: string, property: string) {
+    return html`
+      <div>
+        <strong>${header}:</strong> ${property}
+      </div>
+    `;
+  }
+
+  // The render method that returns the component's template
+  render() {
+    return html`
+      <sc-grid-container fluid>
+        <div>${this.renderPageTitle('Entity Information')}</div>
+        <sc-grid-row>
+          ${this.displayEntityList()}
+        </sc-grid-row>
+      </sc-grid-container>
+    `;
+  }
+}
+
 import { html, fixture, expect } from '@open-wc/testing';
 import './entity-information';
 import { EntityInformation } from './entity-information';
