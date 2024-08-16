@@ -1,4 +1,36 @@
+import { fixture, html, expect } from '@open-wc/testing';
+import './child-element';
+import { ParentElement } from './parent-element';
 
+describe('ChildElement', () => {
+  beforeEach(() => {
+    // Mock the state getter of ParentElement
+    Object.defineProperty(ParentElement.prototype, 'state', {
+      get: jest.fn(() => ({ count: 10 })),
+      configurable: true
+    });
+  });
+
+  afterEach(() => {
+    // Restore the original state getter
+    jest.restoreAllMocks();
+  });
+
+  it('renders initial mocked state', async () => {
+    const el = await fixture(html`<child-element></child-element>`);
+    const div = el.shadowRoot!.querySelector('div')!;
+    expect(div.textContent).toBe('Count: 10');
+  });
+
+  it('increments the count', async () => {
+    const el = await fixture(html`<child-element></child-element>`);
+    const button = el.shadowRoot!.querySelector('button')!;
+    button.click();
+    await el.updateComplete;
+    const div = el.shadowRoot!.querySelector('div')!;
+    expect(div.textContent).toBe('Count: 11');
+  });
+});
 import { html, fixture, expect } from '@open-wc/testing';
 import './entity-information'; // Import the component
 
