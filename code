@@ -1,3 +1,33 @@
+
+import { html, fixture, expect } from '@open-wc/testing';
+import './entity-information.js'; // Import the component
+
+describe('EntityInformation Component', () => {
+  it('renders the correct title', async () => {
+    const el = await fixture(html`<kyx-entity-information></kyx-entity-information>`);
+    const title = el.shadowRoot.querySelector('.pageTitle');
+    expect(title).to.exist;
+    expect(title.textContent).to.equal('Entity Information');
+  });
+
+  it('renders the correct number of entity columns', async () => {
+    const el = await fixture(html`<kyx-entity-information></kyx-entity-information>`);
+    const columns = el.shadowRoot.querySelectorAll('sc-grid-column');
+    expect(columns.length).to.equal(3); // Assuming you have 3 static entities in your data
+  });
+
+  it('renders the correct headers and properties', async () => {
+    const el = await fixture(html`<kyx-entity-information></kyx-entity-information>`);
+    const columns = el.shadowRoot.querySelectorAll('sc-grid-column');
+
+    expect(columns[0].textContent).to.contain('Entity 1');
+    expect(columns[1].textContent).to.contain('Entity 2');
+    expect(columns[2].textContent).to.contain('Entity 3');
+
+    // Additional checks can be added if the properties are displayed as well
+  });
+});
+
 import { fixture, html, expect } from '@open-wc/testing';
 import './entity-information.ts'; // Adjust this import to the actual path of your component
 
