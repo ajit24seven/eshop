@@ -1,4 +1,55 @@
 
+import { html, fixture, expect } from '@open-wc/testing';
+import './entity-information'; // Import the component
+
+describe('EntityInformation Component', () => {
+  
+  let element: EntityInformation;
+
+  beforeEach(async () => {
+    element = await fixture<EntityInformation>(html`<kyx-entity-information></kyx-entity-information>`);
+  });
+
+  it('should initialize with an empty entityInfoList and entityInfoListData', () => {
+    expect(element.entityInfoList).to.be.an('array').that.is.empty;
+    expect(element.entityInfoListData).to.be.an('array').that.is.empty;
+  });
+
+  it('should update entityInfoList and entityInfoListData after firstUpdated', async () => {
+    element.firstUpdated();
+    await element.updateComplete; // Ensure the update cycle completes
+
+    expect(element.entityInfoList).to.have.lengthOf(2);
+    expect(element.entityInfoListData).to.deep.equal(element.entityInfoList);
+  });
+
+  it('should render the page title correctly', async () => {
+    const titleElement = element.shadowRoot!.querySelector('h1');
+    expect(titleElement!.textContent).to.equal('Entity Information');
+  });
+
+  it('should correctly map entityInfoList to displayEntityList', async () => {
+    element.firstUpdated(); // Trigger the data initialization
+    await element.updateComplete; // Wait for the component to re-render
+
+    const gridColumns = element.shadowRoot!.querySelectorAll('sc-grid-column');
+    expect(gridColumns.length).to.equal(2); // Expect two columns based on initialized data
+    expect(gridColumns[0].textContent).to.contain('Header1');
+    expect(gridColumns[1].textContent).to.contain('Header2');
+  });
+
+  it('should correctly render individual entity items', async () => {
+    element.firstUpdated();
+    await element.updateComplete;
+
+    const entityItems = element.shadowRoot!.querySelectorAll('sc-grid-column div');
+    expect(entityItems.length).to.equal(2); // Two items based on the initialized data
+    expect(entityItems[0].textContent).to.equal('Header1: Value1');
+    expect(entityItems[1].textContent).to.equal('Header2: Value2');
+  });
+});
+
+
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { IEntitiyInfoList } from './entity-information.config';
