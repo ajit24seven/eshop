@@ -1,0 +1,82 @@
+import { LitElement, html, css, property } from 'lit';
+import { GraphQLController } from './graphql-controller.js';
+
+export class GraphQLQueryWrapper extends LitElement {
+  static styles = css`
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.2em;
+    }
+
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+  `;
+
+  @property({ type: [String, Array] }) queries = '';
+  @property({ type: [Object, Array] }) variables = {};
+  @property({ type: Object }) gqlCont = null;
+  @property({ type: Function }) loadingTemplate = () => html`<div class="loading">Loading...</div>`;
+  @property({ type: Function }) errorTemplate = (error) => html`<div class="error">Error: ${error.message}</div>`;
+  @property({ type: Function }) contentTemplate = (data) => html`<div>No content template provided.</div>`;
+  @property({ type: Boolean }) autoFetch = true; // To control automatic fetching
+
+  constructor() {
+    super();
+    this.gqlCont = new GraphQLController(this);
+  }
+
+  async firstUpdated() {
+    if (this.autoFetch) {
+      await this.fetchData();
+    }
+  }
+
+  async fetchData() {
+    const queries = Array.isArray(this.queries) ? this.queries : [this.queries];
+    const variablesList = Array.isArray(this.variables) ? this.variables : [this.variables];
+
+    this.dispatchEvent(new CustomEvent('query-start', { detail: { queries, variablesList } }));
+
+    try {
+      const results = await Promise.all(
+        queries.map((query, index) =>
+          this.gqlCont.query(query, variablesList[index] || {})
+        )
+      );
+
+      this.isLoading = results.some(result => result.isLoading);
+      this.error = results.find(result => result.error)?.error || null;
+      this.results = results.map(result => result.data);
+
+      this.dispatchEvent(new CustomEvent('query-result', { detail: { results: this.results } }));
+
+    } catch (err) {
+      this.error = err;
+    } finally {
+      this.dispatchEvent(new CustomEvent('query-end', { detail: { results: this.results, error: this.error } }));
+      this.requestUpdate();
+    }
+  }
+
+  render() {
+    if (this.isLoading) {
+      return this.loadingTemplate();
+    }
+    if (this.error) {
+      return this.errorTemplate(this.error);
+    }
+    return html`
+      ${this.results.map(data => this.contentTemplate(data))}
+    `;
+  }
+
+  async refresh() {
+    await this.fetchData();
+  }
+}
+
+customElements.define('graphql-query-wrapper', GraphQLQueryWrapper);
