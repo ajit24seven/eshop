@@ -306,3 +306,195 @@ describe('MyComponent', () => {
   });
 });
 
+======
+
+import { LitElement, html, css, property } from 'lit';
+import { GraphQLController } from './graphql-controller.js';
+
+export class GraphQLQueryWrapper extends LitElement {
+  static styles = css`
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+  `;
+
+  @property({ type: String }) query = '';
+  @property({ type: Object }) variables = {};
+  @property({ type: Object }) gqlCont = null;
+  @property({ type: Function }) loadingTemplate = () => html`<div class="loading">Loading...</div>`;
+  @property({ type: Function }) errorTemplate = (error) => html`<div class="error">Error: ${error.message}</div>`;
+  @property({ type: Function }) contentTemplate = (data) => html`<div>No content template provided.</div>`;
+
+  constructor() {
+    super();
+    this.gqlCont = new GraphQLController(this);
+  }
+
+  async firstUpdated() {
+    await this.fetchData();
+  }
+
+  async fetchData() {
+    if (this.query) {
+      this.dispatchEvent(new CustomEvent('query-start', { detail: { query: this.query, variables: this.variables } }));
+      await this.gqlCont.query(this.query, this.variables);
+      this.dispatchEvent(new CustomEvent('query-end', { detail: { data: this.gqlCont.data, error: this.gqlCont.error } }));
+      this.requestUpdate();
+    }
+  }
+
+  render() {
+    return html`
+      ${this.gqlCont.isLoading
+        ? this.loadingTemplate()
+        : this.gqlCont.error
+        ? this.errorTemplate(this.gqlCont.error)
+        : this.contentTemplate(this.gqlCont.data)}
+    `;
+  }
+}
+
+customElements.define('graphql-query-wrapper', GraphQLQueryWrapper);
+
+
+===========
+
+import { html, fixture, expect } from '@open-wc/testing';
+import { GraphQLQueryWrapper } from './graphql-query-wrapper.js';
+import { GraphQLController } from './graphql-controller.js';
+
+// Mock the GraphQLController
+jest.mock('./graphql-controller.js', () => {
+  return {
+    GraphQLController: jest.fn().mockImplementation(() => ({
+      query: jest.fn(),
+      isLoading: false,
+      error: null,
+      data: null,
+    })),
+  };
+});
+
+describe('GraphQLQueryWrapper', () => {
+  let element;
+  const mockData = { someField: [{ id: 1, name: 'Item 1' }] };
+
+  beforeEach(async () => {
+    // Mock GraphQLController methods
+    const mockQuery = jest.fn();
+    mockQuery.mockResolvedValue({ data: mockData, error: null, isLoading: false });
+    
+    GraphQLController.mockImplementation(() => ({
+      query: mockQuery,
+      isLoading: false,
+      error: null,
+      data: mockData,
+    }));
+
+    element = await fixture(html`
+      <graphql-query-wrapper
+        .query=${`
+          query {
+            someField {
+              id
+              name
+            }
+          }
+        `}
+        .variables=${{}}
+        .loadingTemplate=${() => html`<div class="loading">Loading...</div>`}
+        .errorTemplate=${(error) => html`<div class="error">Error: ${error.message}</div>`}
+        .contentTemplate=${(data) => html`
+          <div class="content">
+            <p>Data:</p>
+            <ul>
+              ${data.someField.map(item => html`<li>${item.name}</li>`)}
+            </ul>
+          </div>
+        `}
+      ></graphql-query-wrapper>
+    `);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('renders loading state correctly', async () => {
+    // Set the controller to loading state
+    GraphQLController.mockImplementation(() => ({
+      query: jest.fn().mockResolvedValue({ data: null, error: null, isLoading: true }),
+      isLoading: true,
+      error: null,
+      data: null,
+    }));
+
+    element = await fixture(html`
+      <graphql-query-wrapper
+        .query=${``}
+        .loadingTemplate=${() => html`<div class="loading">Loading...</div>`}
+      ></graphql-query-wrapper>
+    `);
+
+    await element.updateComplete;
+
+    const loadingDiv = element.shadowRoot.querySelector('.loading');
+    expect(loadingDiv).toBeDefined();
+    expect(loadingDiv.textContent).toBe('Loading...');
+  });
+
+  test('renders error state correctly', async () => {
+    const mockError = new Error('GraphQL error');
+
+    // Set the controller to error state
+    GraphQLController.mockImplementation(() => ({
+      query: jest.fn().mockRejectedValue(mockError),
+      isLoading: false,
+      error: mockError,
+      data: null,
+    }));
+
+    element = await fixture(html`
+      <graphql-query-wrapper
+        .query=${``}
+        .errorTemplate=${(error) => html`<div class="error">Error: ${error.message}</div>`}
+      ></graphql-query-wrapper>
+    `);
+
+    await element.updateComplete;
+
+    const errorDiv = element.shadowRoot.querySelector('.error');
+    expect(errorDiv).toBeDefined();
+    expect(errorDiv.textContent).toBe('Error: GraphQL error');
+  });
+
+  test('renders content state correctly', async () => {
+    await element.updateComplete;
+
+    const contentDiv = element.shadowRoot.querySelector('.content');
+    expect(contentDiv).toBeDefined();
+    expect(contentDiv.textContent).toContain('Data:');
+    expect(contentDiv.textContent).toContain('Item 1');
+  });
+
+  test('emits query-start and query-end events', async () => {
+    const queryStartHandler = jest.fn();
+    const queryEndHandler = jest.fn();
+
+    element.addEventListener('query-start', queryStartHandler);
+    element.addEventListener('query-end', queryEndHandler);
+
+    await element.fetchData();
+
+    expect(queryStartHandler).toHaveBeenCalled();
+    expect(queryEndHandler).toHaveBeenCalled();
+  });
+});
+
