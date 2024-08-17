@@ -1,0 +1,31 @@
+// graphql-controller.js
+import { ReactiveController } from 'lit';
+import { GraphQLClient } from 'graphql-request';
+
+export class GraphQLController extends ReactiveController {
+  constructor(host, endpoint) {
+    super(host);
+    this.host = host;
+    this.client = new GraphQLClient(endpoint);
+    this.isLoading = false;
+    this.error = null;
+  }
+
+  async query(query, variables = {}) {
+    this.isLoading = true;
+    this.error = null;
+    this.host.requestUpdate(); // Notify LitElement of property changes
+
+    try {
+      const data = await this.client.request(query, variables);
+      this.host.data = data; // Update the host's property with the received data
+    } catch (error) {
+      console.error('GraphQL query error:', error);
+      this.error = error; // Handle errors
+      this.host.requestUpdate(); // Notify LitElement of property changes
+    } finally {
+      this.isLoading = false;
+      this.host.requestUpdate(); // Notify LitElement of property changes
+    }
+  }
+}
