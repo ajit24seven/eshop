@@ -29,3 +29,280 @@ export class GraphQLController extends ReactiveController {
     }
   }
 }
+
+========
+
+import { ReactiveController } from 'lit';
+import { GraphQLClient } from 'graphql-request';
+
+export class GraphQLController extends ReactiveController {
+  constructor(host) {
+    super(host);
+    this.host = host;
+    this.endpoint = 'https://your-graphql-endpoint.com/graphql';
+    this.client = new GraphQLClient(this.endpoint, {
+      headers: {
+        // Default headers if needed
+      }
+    });
+    this._isLoading = false;
+    this._error = null;
+    this._data = null;
+  }
+
+  // Getter for isLoading
+  get isLoading() {
+    return this._isLoading;
+  }
+
+  // Getter for error
+  get error() {
+    return this._error;
+  }
+
+  // Getter for data
+  get data() {
+    return this._data;
+  }
+
+  async query(query, variables = {}) {
+    this._isLoading = true;
+    this._error = null;
+    this.host.requestUpdate(); // Notify LitElement of property changes
+
+    try {
+      // Add authorization token to headers
+      const token = 'your-auth-token'; // Replace with your token retrieval logic
+      this.client.setHeader('Authorization', `Bearer ${token}`);
+
+      // Perform the GraphQL query
+      this._data = await this.client.request(query, variables);
+    } catch (error) {
+      console.error('GraphQL query error:', error);
+      this._error = error;
+    } finally {
+      this._isLoading = false;
+      this.host.requestUpdate(); // Notify LitElement of property changes
+    }
+
+    return {
+      data: this._data,
+      error: this._error,
+      isLoading: this._isLoading,
+    };
+  }
+
+  // Method to reset state
+  reset() {
+    this._isLoading = false;
+    this._error = null;
+    this._data = null;
+    this.host.requestUpdate(); // Notify LitElement of property changes
+  }
+}
+======
+
+import { GraphQLController } from './graphql-controller.js';
+import { GraphQLClient } from 'graphql-request';
+
+// Mock the GraphQLClient
+jest.mock('graphql-request', () => ({
+  GraphQLClient: jest.fn().mockImplementation(() => ({
+    request: jest.fn(),
+    setHeader: jest.fn(),
+  })),
+}));
+
+describe('GraphQLController', () => {
+  let controller;
+  let mockRequest;
+
+  beforeEach(() => {
+    controller = new GraphQLController({});
+    mockRequest = jest.spyOn(controller.client, 'request');
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('initial state', () => {
+    expect(controller.isLoading).toBe(false);
+    expect(controller.error).toBe(null);
+    expect(controller.data).toBe(null);
+  });
+
+  test('handles successful query', async () => {
+    const mockData = { someField: [{ id: 1, name: 'Item 1' }] };
+    mockRequest.mockResolvedValue(mockData);
+
+    const query = `query { someField { id name } }`;
+    const { data, error, isLoading } = await controller.query(query);
+
+    expect(controller.isLoading).toBe(false);
+    expect(controller.error).toBe(null);
+    expect(controller.data).toEqual(mockData);
+    expect(data).toEqual(mockData);
+    expect(error).toBe(null);
+    expect(isLoading).toBe(false);
+  });
+
+  test('handles failed query', async () => {
+    const mockError = new Error('GraphQL error');
+    mockRequest.mockRejectedValue(mockError);
+
+    const query = `query { someField { id name } }`;
+    const { data, error, isLoading } = await controller.query(query);
+
+    expect(controller.isLoading).toBe(false);
+    expect(controller.error).toEqual(mockError);
+    expect(controller.data).toBe(null);
+    expect(data).toBe(null);
+    expect(error).toEqual(mockError);
+    expect(isLoading).toBe(false);
+  });
+
+  test('sets authorization header', async () => {
+    const token = 'your-auth-token';
+    const query = `query { someField { id name } }`;
+    await controller.query(query);
+    
+    expect(controller.client.setHeader).toHaveBeenCalledWith('Authorization', `Bearer ${token}`);
+  });
+});
+
+========
+import { LitElement, html, css } from 'lit';
+import { GraphQLController } from './graphql-controller.js';
+import { property } from 'lit/decorators.js';
+import './spinner-component.js';
+import './error-component.js';
+
+class MyComponent extends LitElement {
+  static styles = css`
+    .content {
+      padding: 10px;
+    }
+  `;
+
+  @property({ type: Object })
+  data = {};
+
+  @property({ type: Boolean })
+  isLoading = false;
+
+  @property({ type: Object })
+  error = null;
+
+  constructor() {
+    super();
+    this.gqlCont = new GraphQLController(this); // Renamed to `gqlCont`
+
+    this.fetchData(); // Fetch data on initialization
+  }
+
+  async fetchData() {
+    const query = `
+      query {
+        someField {
+          id
+          name
+        }
+      }
+    `;
+
+    // Perform the query and update local properties based on controller state
+    const { data, error, isLoading } = await this.gqlCont.query(query);
+    this.data = data;
+    this.error = error;
+    this.isLoading = isLoading;
+  }
+
+  render() {
+    return html`
+      <div class="content">
+        ${this.isLoading
+          ? html`<spinner-component></spinner-component>`
+          : this.error
+          ? html`<error-component .message="${this.error.message}"></error-component>`
+          : html`
+              <p>Data:</p>
+              <ul>
+                ${this.data.someField ? this.data.someField.map(item => html`
+                  <li>${item.name}</li>
+                `) : html`<p>No data available.</p>`}
+              </ul>
+            `}
+      </div>
+    `;
+  }
+}
+
+customElements.define('my-component', MyComponent);
+
+
+========
+
+import { html, css, LitElement } from 'lit';
+import { fixture, html as litHtml } from '@open-wc/testing';
+import { GraphQLController } from './graphql-controller.js';
+import './my-component.js'; // Import your LitElement component
+
+// Mock GraphQLController
+jest.mock('./graphql-controller.js');
+
+describe('MyComponent', () => {
+  let element;
+  const mockData = { someField: [{ id: 1, name: 'Item 1' }] };
+  
+  beforeEach(async () => {
+    // Mock GraphQLController behavior
+    GraphQLController.mockImplementation(() => ({
+      query: jest.fn().mockResolvedValue({ data: mockData, error: null, isLoading: false }),
+      isLoading: false,
+      error: null,
+      data: mockData,
+    }));
+
+    element = await fixture(litHtml`<my-component></my-component>`);
+  });
+
+  test('renders data correctly', async () => {
+    await element.updateComplete;
+
+    expect(element.shadowRoot.querySelector('ul')).toBeDefined();
+    expect(element.shadowRoot.querySelectorAll('li').length).toBe(1);
+    expect(element.shadowRoot.querySelector('li').textContent).toBe('Item 1');
+  });
+
+  test('shows spinner when loading', async () => {
+    GraphQLController.mockImplementation(() => ({
+      query: jest.fn().mockResolvedValue({ data: null, error: null, isLoading: true }),
+      isLoading: true,
+      error: null,
+      data: null,
+    }));
+
+    element = await fixture(litHtml`<my-component></my-component>`);
+    await element.updateComplete;
+
+    expect(element.shadowRoot.querySelector('spinner-component')).toBeDefined();
+  });
+
+  test('shows error message when there is an error', async () => {
+    const mockError = new Error('GraphQL error');
+    GraphQLController.mockImplementation(() => ({
+      query: jest.fn().mockRejectedValue(mockError),
+      isLoading: false,
+      error: mockError,
+      data: null,
+    }));
+
+    element = await fixture(litHtml`<my-component></my-component>`);
+    await element.updateComplete;
+
+    expect(element.shadowRoot.querySelector('error-component')).toBeDefined();
+    expect(element.shadowRoot.querySelector('error-component').message).toBe('GraphQL error');
+  });
+});
+
