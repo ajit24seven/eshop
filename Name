@@ -1,0 +1,126 @@
+import { LitElement, html, css } from 'lit-element';
+import { getGnsData } from '../../api';
+import {
+    riskFactorConfig,
+    screeningEntityColumns,
+    screeningHitDetailsColumns,
+    screeningWatchlistColumns,
+} from '../config';
+import ScGridStyle from '@scdevkit/webkit/styles/ScGridStyle.js';
+import '../../components/loader/loader.component';
+import '../../components/table/table.component';
+import { appStyles } from '../../app-style';
+import { DISPLAY_TYPE } from '../../constants/common';
+import { formatDate } from '../../utils/commonUtils';
+import { CRA_QUERY, fetchXYXScreeningWatchlist } from '../../constants/graphQL';
+
+export class NameScreening extends LitElement {
+    static styles = css`
+        ${ScGridStyle}
+        ${appStyles}
+    `;
+
+    static properties = {
+        openSideNav: {},
+        openAssessment: {},
+        openHitDetails: {},
+        openEditForm: {},
+        selectedRow: {},
+    };
+
+    constructor() {
+        super();
+        this.openSideNav = true;
+        this.openAssessment = false;
+        this.openHitDetails = false;
+        this.openEditForm = false;
+        this.selectedRow = {};
+
+        gnsReport = [];
+    }
+}
+generatePayload = (fieldName, values) => {
+    return {
+        filters: [
+            {
+                logic: 'AND',
+                contents: [
+                    {
+                        fieldName,
+                        values,
+                        operator: 'equals',
+                    },
+                ],
+            },
+        ],
+    };
+};
+
+screeningPopup = new Task(this, {
+    task: async () => {
+        const payloadParam = this.generatePayload('id', [this.selectedRow.id]);
+        return await Promise.all(
+            [
+                'kyx-screening-entity',
+                'kyx-screening-watchlist',
+                'kyx-screening-hitdetails',
+            ].map(async viewName => {
+                const response = await getgnsData(payloadParam, viewName);
+                const { status, data } = response;
+                if (status !== 200) {
+                    throw new Error(response.status);
+                }
+                return data;
+            })
+        );
+    }
+});
+
+renderScreeningPopup = () => {
+    return this.screeningPopup.render({
+        pending: () => html`<kyx-loader />`,
+        complete: data => {
+            return html`
+                ${this.renderScreeningEntity(data[0])}
+                ${this.renderScreeningWatchlist(data[1])}
+                ${this.renderScreeningHitdetails(data[2])}
+            `;
+        },
+        error: e => html`
+            <sc-alert type="error" mode="default" title="" open="">
+                <p>Error: ${e}</p>
+            </sc-alert>
+        `,
+    });
+};
+
+renderScreeningEntity = data => {
+    const { data: entityData } = data;
+    return html`<sc-grid-container fluid style="margin-top: 30px">
+        <sc-grid-row>
+            ${screeningEntityColumns.map(({ property, header, displayType }) => {
+                const val =
+                    displayType === DISPLAY_TYPE.DATE
+                        ? formatDate(entityData[0][property])
+                        : entityData[0][property];
+                return html`<sc-grid-column col-6 xxl="3" class="my-2">
+                    <sc-label
+                        label=${header}
+                        label-size="xxs"
+                        tooltip=""
+                        tooltip-placement="top"
+                    ></sc-label>
+                    <div style="margin-top: -6px">${val || '-'}</div>
+                </sc-grid-column>`;
+            })}
+        </sc-grid-row>
+    </sc-grid-container>`;
+};
+
+renderScreeningWatchlist = data => {
+    const { data: watchlistData } = data;
+    return html`<clmt-table
+        .columnsConfig=${screeningWatchlistColumns}
+        .data=${watchlistData}
+    />`;
+};
