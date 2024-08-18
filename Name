@@ -124,3 +124,216 @@ renderScreeningWatchlist = data => {
         .data=${watchlistData}
     />`;
 };
+
+renderScreeningHitDetails = data => {
+    const { data: hitData } = data;
+    const sDataLength = this.getFilteredData(hitData, 'Sanctions').length;
+    const pDataLength = this.getFilteredData(
+        hitData,
+        'Politically Exposed Person'
+    ).length;
+    const aDataLength = this.getFilteredData(hitData, 'Adverse Media').length;
+    return html`
+        <sc-tab-group class="sc-tabs mx-2">
+            <sc-tab
+                slot="nav"
+                panel="tab1"
+                active=""
+                ?disabled=${sDataLength === 0}
+            >
+                <span class="me-1">Sanctions</span>
+                ${sDataLength
+                    ? html`<sc-badge
+                          type="number"
+                          color="red"
+                          number=${sDataLength}
+                          label=""
+                      ></sc-badge>`
+                    : null}
+            </sc-tab>
+            <sc-tab
+                slot="nav"
+                panel="tab2"
+                ?disabled=${pDataLength === 0}
+            >
+                <span class="me-1">Politically Exposed Person</span>
+                ${pDataLength
+                    ? html`<sc-badge
+                          type="number"
+                          color="red"
+                          number=${pDataLength}
+                          label=""
+                      ></sc-badge>`
+                    : null}
+            </sc-tab>
+            <sc-tab
+                slot="nav"
+                panel="tab3"
+                ?disabled=${aDataLength === 0}
+            >
+                <span class="me-1">Adverse Media</span>
+                ${aDataLength
+                    ? html`<sc-badge
+                          type="number"
+                          color="red"
+                          number=${aDataLength}
+                          label=""
+                      ></sc-badge>`
+                    : null}
+            </sc-tab>
+        </sc-tab-group>
+
+        <sc-tab-panel name="tab1" class="border-top">
+            <clmt-table
+                .columnsConfig=${screeningHitdetailsColumns}
+                .data=${this.getFilteredData(hitData, 'Sanctions')}
+            ></clmt-table>
+        </sc-tab-panel>
+        <sc-tab-panel name="tab2" class="border-top">
+            <clmt-table
+                .columnsConfig=${screeningHitdetailsColumns}
+                .data=${this.getFilteredData(hitData, 'Politically Exposed Person')}
+            ></clmt-table>
+        </sc-tab-panel>
+        <sc-tab-panel name="tab3" class="border-top">
+            <clmt-table
+                .columnsConfig=${screeningHitdetailsColumns}
+                .data=${this.getFilteredData(hitData, 'Adverse Media')}
+            ></clmt-table>
+        </sc-tab-panel>
+    `;
+};
+
+dataViewFormatter = (data, config) => {
+    return config.map(({ label, key }) => ({
+        field: {
+            value: label,
+        },
+        value: {
+            value: data[key] || '--',
+        },
+    }));
+};
+
+renderTable = () => {
+    return html`
+        <sc-data-graphql query=${fetchKYXScreeningWatchlist}>
+            <div slot="empty">
+                Data not found
+            </div>
+            <div slot="loading" class="loading">
+                <sc-spinner type="component" size="xxl"></sc-spinner>
+            </div>
+            <div slot="loaded">
+                <clmt-table
+                    .columnsConfig=${riskFactorConfig}
+                    .data=${gnsData}
+                    totalCount=${totalCount}
+                    @actionHandler=${this.actionHandler}
+                    @actionEnabler=${this.actionEnabler}
+                ></clmt-table>
+            </div>
+            <div slot="error">
+                Error Occurred
+            </div>
+        </sc-data-graphql>
+    `;
+};
+
+tableDataFormatter = (data, arrKey) => {
+    data.reduce((formatted, { [arrKey]: arrayData, ...rest }) => {
+        const data = arrayData.map(arrData => {
+            return { ...rest, ...arrData };
+        });
+        formatted.push(...data);
+        return formatted;
+    }, []);
+    return formatted;
+};
+
+actionHandler = ({ detail }) => {
+    const { rowData, actionName } = detail;
+    if (actionName === 'cellClicked') {
+        const { selectedData } = rowData;
+        this.selectedRow = selectedData[0].data;
+        this.screeningPopup.run();
+        this.openEditForm = true;
+
+        console.log(rowData, actionName);
+    }
+};
+
+actionEnabler = ({ detail }) => {
+    const { factorScore, riskVariableRating, callback } = detail;
+    if (callback) {
+        callback({
+            releaseTask: factorScore > 0,
+            assign: riskVariableRating !== 'LOW',
+        });
+    }
+};
+
+render() {
+  return html` 
+    <sc-card>
+      <h2 slot="title">Name Screening</h2>
+      <div slot="body">${this.renderTable()}</div>
+    </sc-card>
+
+    ${this.openEditForm ? html`
+      <sc-modal
+        id="scAssessmentModal"
+        size="lg"
+        ?open=${this.openEditForm}
+        @sc-hide=${() => {
+          this.openEditForm = false;
+          this.openAssessment = true;
+        }}
+      >
+        <div slot="header">
+          <div>
+            <strong>${this.selectedRow.name}</strong>
+          </div>
+        </div>
+
+        ${this.renderScreeningPopup()}
+
+        <div slot="footer" class="d-flex">
+          <sc-button
+            icon="save-line"
+            icon-position="left"
+            class="ms-1"
+            @click=${() => {
+              this.unsaved = false;
+            }}
+            fill
+            ?disabled=${false}
+          >
+            Save
+          </sc-button>
+
+          <sc-button
+            icon="download"
+            icon-position="left"
+            fill
+            ?disabled=${false}
+            class="ms-1"
+          >
+            Export
+          </sc-button>
+
+          <sc-button
+            class="ms-auto"
+            @click=${() => {
+              this.openEditForm = false;
+              this.openAssessment = true;
+            }}
+          >
+            Cancel
+          </sc-button>
+        </div>
+      </sc-modal>
+    ` : null}`;
+  }
+
+customElements.define('kyc-name-screening', NameScreening);
