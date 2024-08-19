@@ -1,3 +1,12 @@
+{ id, query, variables = {}, 
+                pending = () => html`<p>Loading...</p>`, 
+                complete = (data) => html`<div>${data.name}</div>`, 
+                error = (e) => html`<sc-alert type="error" mode="default" title="" open="">
+                                    <p>Error: ${e.message}</p>
+                                  </sc-alert>` 
+              } = {}
+
+
 // graphql-controller.js
 import { ReactiveController } from 'lit';
 import { GraphQLClient } from 'graphql-request';
