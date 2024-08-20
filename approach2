@@ -1,0 +1,88 @@
+import { html, nothing } from 'lit';
+
+class FetchController {
+  constructor() {
+    this._pendingCallback = () => nothing;
+    this._completeCallback = () => nothing;
+    this._errorCallback = () => nothing;
+  }
+
+  fetch(url) {
+    return {
+      render: ({ pending, complete, error }) => {
+        this._pendingCallback = pending || (() => nothing);
+        this._completeCallback = complete || (() => nothing);
+        this._errorCallback = error || (() => nothing);
+
+        return this._fetchData(url);
+      }
+    };
+  }
+
+  async _fetchData(url) {
+    this._updateState('pending');
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      const data = await response.json();
+      this._updateState('complete', data);
+    } catch (error) {
+      this._updateState('error', error);
+    }
+  }
+
+  _updateState(state, data) {
+    switch (state) {
+      case 'pending':
+        this._renderState(this._pendingCallback());
+        break;
+      case 'complete':
+        this._renderState(this._completeCallback(data));
+        break;
+      case 'error':
+        this._renderState(this._errorCallback(data));
+        break;
+    }
+  }
+
+  _renderState(content) {
+    // This is a placeholder function. In practice, you might want to use a callback
+    // to update the component's state or trigger re-rendering.
+    console.log('Rendering:', content);
+  }
+}
+
+========
+
+import { LitElement, html, css, property } from 'lit';
+import { customElement } from 'lit/decorators.js';
+import { FetchController } from './fetch-controller.js'; // Import the controller class
+
+@customElement('my-component')
+class MyComponent extends LitElement {
+  @property({ type: String }) url = '';
+
+  static styles = css`
+    /* Your component styles here */
+  `;
+
+  constructor() {
+    super();
+    this.controller = new FetchController();
+  }
+
+  render() {
+    return html`
+      ${this.controller.fetch(this.url).render({
+        pending: () => html`<p>Loading...</p>`,
+        complete: (data) => html`<div>${data.name}</div>`,
+        error: (e) => html`
+          <sc-alert type="error" mode="default" title="" open="">
+            <p>Error: ${e.message}</p>
+          </sc-alert>`
+      })}
+    `;
+  }
+}
