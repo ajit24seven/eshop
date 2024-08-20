@@ -1,0 +1,82 @@
+// api-controller.js
+import { html, css } from 'lit';
+import { property } from 'lit/decorators.js';
+
+export class ApiController {
+  async fetch(url, { pending, complete, error }) {
+    // Invoke pending rendering if provided
+    if (pending) {
+      this._render(pending());
+    }
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+
+      // Invoke complete rendering with the fetched data
+      if (complete) {
+        this._render(complete(data));
+      }
+    } catch (e) {
+      // Invoke error rendering if provided
+      if (error) {
+        this._render(error(e));
+      }
+    }
+  }
+
+  // Method to update the component’s rendering
+  _render(content) {
+    // This method would need to be implemented based on how you manage rendering.
+    // For example, it could trigger an update in the LitElement component.
+    // Placeholder method for demonstration.
+  }
+}
+=========
+
+// my-component.js
+import { LitElement, html, css, property } from 'lit';
+import { ApiController } from './api-controller.js';
+
+class MyComponent extends LitElement {
+  static styles = css`
+    /* Add component styles here */
+  `;
+
+  @property({ type: Object })
+  data = null;
+
+  @property({ type: String })
+  error = '';
+
+  constructor() {
+    super();
+    this.controller = new ApiController();
+  }
+
+  async fetchData() {
+    await this.controller.fetch('https://api.example.com/data', {
+      pending: () => html`<p>Loading...</p>`,
+      complete: (data) => html`<div>${data.name}</div>`,
+      error: (e) => html`<sc-alert type="error" mode="default" title="" open=""><p>Error: ${e.message}</p></sc-alert>`
+    });
+  }
+
+  render() {
+    return html`
+      <div>
+        ${this.data ? html`<div>${this.data.name}</div>` : html`<p>No data</p>`}
+        ${this.error ? html`<sc-alert type="error" mode="default" title="" open=""><p>Error: ${this.error}</p></sc-alert>` : ''}
+      </div>
+    `;
+  }
+
+  firstUpdated() {
+    this.fetchData();
+  }
+}
+
+customElements.define('my-component', MyComponent);
