@@ -1,0 +1,96 @@
+// api-controller.js
+export class ApiController {
+  constructor(component) {
+    this.component = component;
+  }
+
+  async fetch(url, { onPending, onComplete, onError }) {
+    // Notify the component to render the pending state
+    if (onPending) {
+      this.component.renderState({ status: 'pending' });
+      onPending();
+    }
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+
+      // Notify the component to render the complete state
+      if (onComplete) {
+        this.component.renderState({ status: 'complete', data });
+        onComplete(data);
+      }
+    } catch (e) {
+      // Notify the component to render the error state
+      if (onError) {
+        this.component.renderState({ status: 'error', error: e });
+        onError(e);
+      }
+    }
+  }
+}
+
+
+======
+// my-component.js
+import { LitElement, html, css, property } from 'lit';
+import { ApiController } from './api-controller.js';
+
+class MyComponent extends LitElement {
+  static styles = css`
+    /* Add component styles here */
+  `;
+
+  @property({ type: Object })
+  state = { status: 'idle', data: null, error: null };
+
+  constructor() {
+    super();
+    this.controller = new ApiController(this);
+  }
+
+  async fetchData() {
+    await this.controller.fetch('https://api.example.com/data', {
+      onPending: () => {
+        // Optionally handle pending state, e.g., show a loading spinner
+      },
+      onComplete: (data) => {
+        // Optionally handle complete state, e.g., update the component state
+        this.state = { status: 'complete', data };
+      },
+      onError: (error) => {
+        // Optionally handle error state, e.g., display an error message
+        this.state = { status: 'error', error };
+      }
+    });
+  }
+
+  render() {
+    switch (this.state.status) {
+      case 'pending':
+        return html`<p>Loading...</p>`;
+      case 'complete':
+        return html`<div>${this.state.data.name}</div>`;
+      case 'error':
+        return html`<sc-alert type="error" mode="default" title="" open="">
+                      <p>Error: ${this.state.error.message}</p>
+                    </sc-alert>`;
+      default:
+        return html`<p>No data available</p>`;
+    }
+  }
+
+  firstUpdated() {
+    this.fetchData();
+  }
+
+  // Method to update the component's state
+  renderState(newState) {
+    this.state = { ...this.state, ...newState };
+  }
+}
+
+customElements.define('my-component', MyComponent);
