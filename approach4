@@ -1,0 +1,76 @@
+// fetch-controller.js
+
+export class FetchController {
+  constructor(host) {
+    this.host = host;
+    this.url = '';
+    this.state = {
+      status: 'idle',
+      data: null,
+      error: null,
+    };
+  }
+
+  async fetch(url) {
+    this.url = url;
+    this.state = { status: 'pending', data: null, error: null };
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Network response was not ok');
+      const data = await response.json();
+      this.state = { status: 'complete', data, error: null };
+    } catch (error) {
+      this.state = { status: 'error', data: null, error };
+    }
+
+    this.host.requestUpdate();
+    return this;
+  }
+
+  render(renderers) {
+    switch (this.state.status) {
+      case 'pending':
+        return renderers.pending();
+      case 'complete':
+        return renderers.complete(this.state.data);
+      case 'error':
+        return renderers.error(this.state.error);
+      default:
+        return html``;
+    }
+  }
+}
+
+
+==========
+
+// my-element.js
+
+import { LitElement, html, css, property } from 'lit';
+import { FetchController } from './fetch-controller.js';
+
+export class MyElement extends LitElement {
+  @property({ type: String }) url = '';
+  controller = new FetchController(this);
+
+  static styles = css`
+    /* Add your styles here */
+  `;
+
+  render() {
+    return html`
+      ${this.controller.fetch(this.url).render({
+        pending: () => html`<p>Loading...</p>`,
+        complete: (data) => html`<div>${data.name}</div>`,
+        error: (e) => html`
+          <sc-alert type="error" mode="default" title="" open="">
+            <p>Error: ${e.message}</p>
+          </sc-alert>
+        `,
+      })}
+    `;
+  }
+}
+
+customElements.define('my-element', MyElement);
