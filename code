@@ -1,3 +1,54 @@
+class Debouncer {
+  constructor() {
+    this.wait = 300; // Default debounce wait time
+    this.func = null; // Function to debounce
+    this.timeout = null; // Timeout reference
+  }
+
+  debounce(func, wait) {
+    this.func = func;
+    this.wait = wait;
+    return this; // Return this for chaining
+  }
+
+  call() {
+    if (this.func) {
+      clearTimeout(this.timeout);
+      this.timeout = setTimeout(() => {
+        this.func();
+      }, this.wait);
+    }
+    return this; // Return this for chaining
+  }
+
+  setWait(wait) {
+    this.wait = wait;
+    return this; // Return this for chaining
+  }
+
+  setFunction(func) {
+    this.func = func;
+    return this; // Return this for chaining
+  }
+}
+
+// Usage example:
+const debouncer = new Debouncer();
+
+// Set up the debounced function and call it
+debouncer
+  .debounce(() => {
+    console.log('Debounced function executed');
+  }, 500)
+  .call(); // Will log after 500ms
+
+// Chain additional method calls
+debouncer
+  .setWait(1000)
+  .setFunction(() => {
+    console.log('Another debounced function executed');
+  })
+  .call(); // Will log after 1000ms
 
 generatePayload = (fieldName, values) => {
     return {
