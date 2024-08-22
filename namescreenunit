@@ -97,4 +97,129 @@ describe('NameScreening', () => {
       { tab: 'Sanctions', details: 'Detail 3' },
     ]);
   });
+
+
+
+
+
+
+it('should handle empty data gracefully', async () => {
+  const mockData = { data: [], totalCount: 0 };
+
+  element.gnsCont = {
+    render: ({ complete }) => complete(mockData),
+  };
+
+  await element.updateComplete;
+  const table = element.shadowRoot.querySelector('clmt-table');
+  expect(table.data).toEqual([]);
+  expect(element.shadowRoot.querySelector('div').textContent).toContain('No data available'); // Adjust as needed
+});
+
+
+it('should handle data formatting with missing fields', () => {
+  const data = { name: 'Test' }; // Missing 'age'
+  const config = [{ label: 'Name', key: 'name' }, { label: 'Age', key: 'age' }];
+  const formatted = element.dataViewFormatter(data, config);
+  expect(formatted).toEqual([
+    { field: { value: 'Name' }, value: { value: 'Test' } },
+    { field: { value: 'Age' }, value: { value: '-' } }, // Assuming '-' is used for missing values
+  ]);
+});
+
+it('should trigger Save button action in the edit form modal', async () => {
+  const saveButton = element.shadowRoot.querySelector('sc-button[icon="save_line"]');
+  saveButton.click();
+  await element.updateComplete;
+
+  // Assert expected behavior, e.g., check that unsaved changes flag is updated
+  expect(element.unsaved).toBe(false);
+});
+
+it('should trigger Cancel button action in the edit form modal', async () => {
+  element.openEditForm = true;
+  await element.updateComplete;
+
+  const cancelButton = element.shadowRoot.querySelector('sc-button.ms-auto');
+  cancelButton.click();
+  await element.updateComplete;
+
+  expect(element.openEditForm).toBe(false);
+  expect(element.openAssessment).toBe(true);
+});
+
+it('should switch tabs and display correct content', async () => {
+  const mockHitData = [
+    { tab: 'Sanctions', details: 'Sanction Detail 1' },
+    { tab: 'Politically Exposed Person', details: 'PEP Detail 1' },
+  ];
+
+  element.renderScreeningHitdetails = jest.fn(() => html`
+    <sc-tab-group class="sc-tabs mx-2">
+      <sc-tab slot="nav" panel="tab1" active>Sanctions</sc-tab>
+      <sc-tab slot="nav" panel="tab2">Politically Exposed Person</sc-tab>
+    </sc-tab-group>
+    <sc-tab-panel name="tab1" class="border-top">
+      <clmt-table .data=${element.getFilteredData(mockHitData, 'Sanctions')}></clmt-table>
+    </sc-tab-panel>
+    <sc-tab-panel name="tab2" class="border-top">
+      <clmt-table .data=${element.getFilteredData(mockHitData, 'Politically Exposed Person')}></clmt-table>
+    </sc-tab-panel>
+  `);
+
+  await element.updateComplete;
+
+  // Simulate tab switch
+  const tabs = element.shadowRoot.querySelectorAll('sc-tab');
+  tabs[1].click(); // Switch to "Politically Exposed Person" tab
+  await element.updateComplete;
+
+  const table = element.shadowRoot.querySelector('clmt-table');
+  expect(table.data).toEqual([{ tab: 'Politically Exposed Person', details: 'PEP Detail 1' }]);
+});
+
+it('should handle different action types in actionHandler', async () => {
+  const mockActionDetail = {
+    detail: {
+      rowData: { selectedData: [{ data: { name: 'Test Name' } }] },
+      actionName: 'cellClicked',
+    },
+  };
+
+  element.actionHandler(mockActionDetail);
+  await element.updateComplete;
+
+  expect(element.selectedRow).toEqual({ name: 'Test Name' });
+  expect(element.openEditForm).toBe(true);
+});
+
+it('should handle hit detail cell click in actionHitDetailHandler', async () => {
+  const mockActionDetail = {
+    detail: {
+      rowData: { selectedData: [{ data: { detail: 'Hit Detail' } }] },
+      actionName: 'cellClicked',
+    },
+  };
+
+  element.actionHitDetailHandler(mockActionDetail);
+  await element.updateComplete;
+
+  expect(element.selectedHitDetailsRow).toEqual({ detail: 'Hit Detail' });
+  expect(element.openHitDetails).toBe(true);
+});
+
+it('should handle modal close event', async () => {
+  element.openEditForm = true;
+  await element.updateComplete;
+
+  const modal = element.shadowRoot.querySelector('#scAssessmentModal');
+  modal.dispatchEvent(new Event('sc-hide'));
+  await element.updateComplete;
+
+  expect(element.openEditForm).toBe(false);
+  expect(element.openAssessment).toBe(true);
+});
+
+
+
 });
