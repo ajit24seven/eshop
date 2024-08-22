@@ -384,3 +384,38 @@ actionHitDetailHandler = ({ detail }) => {
     }
     console.log(rowData, actionName);
 };
+actionEnabler = ({ detail }) => {
+    const { factorScore, riskVariableRating, callback } = detail;
+
+    if (callback) {
+        callback({
+            releaseTask: factorScore > 0,
+            assign: riskVariableRating !== 'LOW',
+        });
+    }
+};
+
+renderScreen = data => {
+    const { data: gnsData, totalCount } = data;
+    return html`${gnsData.length
+        ? html`
+            <clmt-table
+                .columnsConfig=${riskFactorConfig}
+                .data=${gnsData}
+                totalCount=${totalCount}
+                @actionHandler=${this.actionHandler}
+                @actionEnabler=${this.actionEnabler}
+            ></clmt-table>
+        `
+        : null}`;
+};
+
+renderTable = () => {
+    return this.gnsCont.render({
+        complete: data => this.renderScreen(data),
+    });
+};
+
+firstUpdated() {
+    this.gnsCont.run();
+}
