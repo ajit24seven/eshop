@@ -343,4 +343,44 @@ render() {
 
 
 
+dataViewFormatter = (data, config) => {
+    return config.map(({ label, key }) => ({
+        field: {
+            value: label,
+        },
+        value: {
+            value: data[key] || '-',
+        },
+    }));
+};
 
+tableDataFormatter = (data, arrKey) => 
+    data.reduce((formatted, { [arrKey]: arrayData, ...rest }) => {
+        const data = arrayData.map(arrData => {
+            return { ...rest, ...arrData };
+        });
+        formatted.push(...data);
+        return formatted;
+    }, []);
+
+actionHandler = ({ detail }) => {
+    const { rowData, actionName } = detail;
+    if (actionName === 'cellClicked') {
+        const { selectedData } = rowData;
+        this.gqlModalCont.run();
+        this.selectedRow = selectedData[0].data;
+        this.openEditForm = true;
+    }
+    console.log(rowData, actionName);
+};
+
+actionHitDetailHandler = ({ detail }) => {
+    const { rowData, actionName } = detail;
+    if (actionName === 'cellClicked') {
+        const { selectedData } = rowData;
+        this.selectHitDetailsRow = selectedData[0].data;
+        this.openHitDetails = true;
+        this.openEditForm = false;
+    }
+    console.log(rowData, actionName);
+};
