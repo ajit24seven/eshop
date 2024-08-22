@@ -1,0 +1,100 @@
+import { html, css } from 'lit';
+import { fixture, expect, html as litHtml } from '@open-wc/testing';
+import '../path/to/your/name-screening-component'; // Adjust the import path
+import { NameScreening } from '../path/to/your/name-screening-component'; // Adjust the import path
+
+describe('NameScreening', () => {
+  let element;
+
+  beforeEach(async () => {
+    element = await fixture(html`<name-screening></name-screening>`);
+  });
+
+  it('should be defined', () => {
+    expect(element).toBeDefined();
+  });
+
+  it('should have default properties', () => {
+    expect(element.openSideNav).toBe(true);
+    expect(element.openAssessment).toBe(false);
+    expect(element.openHitDetails).toBe(false);
+    expect(element.openEditForm).toBe(false);
+    expect(element.selectedRow).toEqual({});
+    expect(element.selectedHitDetailsRow).toEqual({});
+  });
+
+  it('should render the page title', async () => {
+    await element.updateComplete; // Wait for LitElement updates
+    const title = element.shadowRoot.querySelector('div');
+    expect(title.textContent).toContain('Name Screening');
+  });
+
+  it('should handle data rendering correctly', async () => {
+    const mockData = {
+      data: [
+        { name: 'Test Name', otherField: 'Test Value' },
+      ],
+      totalCount: 1,
+    };
+
+    element.gnsCont = {
+      render: ({ complete }) => complete(mockData),
+    };
+
+    await element.updateComplete;
+    const table = element.shadowRoot.querySelector('clmt-table');
+    expect(table).toBeDefined();
+    expect(table.data).toEqual(mockData.data);
+  });
+
+  it('should open and close modals correctly', async () => {
+    element.openEditForm = true;
+    await element.updateComplete;
+    let modal = element.shadowRoot.querySelector('#scAssessmentModal');
+    expect(modal.open).toBe(true);
+
+    element.openEditForm = false;
+    await element.updateComplete;
+    modal = element.shadowRoot.querySelector('#scAssessmentModal');
+    expect(modal.open).toBe(false);
+  });
+
+  it('should handle table actions', async () => {
+    const mockActionDetail = {
+      detail: {
+        rowData: { selectedData: [{ data: { name: 'Test' } }] },
+        actionName: 'cellClicked',
+      },
+    };
+
+    element.actionHandler(mockActionDetail);
+    await element.updateComplete;
+
+    expect(element.selectedRow).toEqual({ name: 'Test' });
+    expect(element.openEditForm).toBe(true);
+  });
+
+  it('should format data correctly', () => {
+    const data = { name: 'Test', age: 25 };
+    const config = [{ label: 'Name', key: 'name' }, { label: 'Age', key: 'age' }];
+    const formatted = element.dataViewFormatter(data, config);
+    expect(formatted).toEqual([
+      { field: { value: 'Name' }, value: { value: 'Test' } },
+      { field: { value: 'Age' }, value: { value: 25 } },
+    ]);
+  });
+
+  it('should handle tab data filtering', () => {
+    const mockData = [
+      { tab: 'Sanctions', details: 'Detail 1' },
+      { tab: 'Politically Exposed Person', details: 'Detail 2' },
+      { tab: 'Sanctions', details: 'Detail 3' },
+    ];
+
+    const sanctionsData = element.getFilteredData(mockData, 'Sanctions');
+    expect(sanctionsData).toEqual([
+      { tab: 'Sanctions', details: 'Detail 1' },
+      { tab: 'Sanctions', details: 'Detail 3' },
+    ]);
+  });
+});
