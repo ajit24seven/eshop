@@ -41,3 +41,66 @@ describe('MyElement with multiple instances of the same controller', () => {
     expect(mockController2.increment).toHaveBeenCalled();
   });
 });
+
+
+
+
+
+
+// src/__tests__/my-element.test.js
+import { MyController } from '../my-controller.js';
+import '../my-element.js';
+
+jest.mock('../my-controller.js');
+
+describe('MyElement with multiple instances of the same controller', () => {
+  let element;
+  let mockController1;
+  let mockController2;
+
+  beforeEach(() => {
+    // Create mock instances for each controller
+    mockController1 = { value: 5, increment: jest.fn() };
+    mockController2 = { value: 10, increment: jest.fn() };
+
+    // Mock MyController constructor to return different instances
+    MyController.mockImplementationOnce(() => mockController1);
+    MyController.mockImplementationOnce(() => mockController2);
+
+    element = document.createElement('my-element');
+    document.body.appendChild(element);
+  });
+
+  afterEach(() => {
+    document.body.removeChild(element);
+    jest.clearAllMocks();
+  });
+
+  it('should render with mocked controller instances', async () => {
+    await element.updateComplete;
+    expect(element.shadowRoot.textContent).toContain('Controller 1 Value: 5');
+    expect(element.shadowRoot.textContent).toContain('Controller 2 Value: 10');
+  });
+
+  it('should update the value of controller2 when increment returns an object', async () => {
+    // Change the behavior of the increment function to return an object
+    mockController2.increment.mockImplementation(() => {
+      return { newValue: 20 };
+    });
+
+    // Call increment and capture the returned object
+    const result = mockController2.increment();
+
+    // Assuming you want to update the value based on the returned object
+    mockController2.value = result.newValue;
+
+    // Force a re-render to reflect the change
+    element.requestUpdate();
+    await element.updateComplete;
+
+    // Check that the updated value is rendered correctly
+    expect(element.shadowRoot.textContent).toContain('Controller 1 Value: 5');
+    expect(element.shadowRoot.textContent).toContain('Controller 2 Value: 20');
+  });
+});
+
