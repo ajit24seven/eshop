@@ -1,0 +1,43 @@
+// src/__tests__/my-element.test.js
+import { MyController } from '../my-controller.js';
+import '../my-element.js';
+
+jest.mock('../my-controller.js');
+
+describe('MyElement with multiple instances of the same controller', () => {
+  let element;
+  let mockController1;
+  let mockController2;
+
+  beforeEach(() => {
+    // Create mock instances for each controller
+    mockController1 = { value: 5, increment: jest.fn() };
+    mockController2 = { value: 10, increment: jest.fn() };
+
+    // Mock MyController constructor to return different instances
+    MyController.mockImplementationOnce(() => mockController1);
+    MyController.mockImplementationOnce(() => mockController2);
+
+    element = document.createElement('my-element');
+    document.body.appendChild(element);
+  });
+
+  afterEach(() => {
+    document.body.removeChild(element);
+    jest.clearAllMocks();
+  });
+
+  it('should render with mocked controller instances', async () => {
+    await element.updateComplete;
+    expect(element.shadowRoot.textContent).toContain('Controller 1 Value: 5');
+    expect(element.shadowRoot.textContent).toContain('Controller 2 Value: 10');
+  });
+
+  it('should call increment method on both controller instances', async () => {
+    element.controller1.increment();
+    element.controller2.increment();
+
+    expect(mockController1.increment).toHaveBeenCalled();
+    expect(mockController2.increment).toHaveBeenCalled();
+  });
+});
