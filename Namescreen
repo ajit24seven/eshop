@@ -1,3 +1,71 @@
+import { MyElement } from './MyElement';
+import { Task } from '@lit/task';
+
+describe('MyElement', () => {
+  let element: MyElement;
+
+  beforeEach(() => {
+    element = new MyElement();
+  });
+
+  it('should fetch product data successfully', async () => {
+    // Mock fetch response
+    const mockProduct = { name: 'Product A', price: 100 };
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockProduct),
+      } as Response)
+    );
+
+    // Spy on the Task
+    const taskSpy = jest.spyOn(element.productTask, 'task');
+
+    // Set productId
+    element.productId = '123';
+    await element.productTask.task(['123'], new AbortController().signal);
+
+    // Verify the fetch call
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://example.com/product/123',
+      expect.any(Object)
+    );
+
+    // Verify the task is called
+    expect(taskSpy).toHaveBeenCalledWith(['123'], expect.any(Object));
+
+    // Verify the product data is correctly handled
+    const result = await element.productTask.task(['123'], new AbortController().signal);
+    expect(result).toEqual(mockProduct);
+  });
+
+  it('should handle fetch error', async () => {
+    // Mock fetch to throw an error
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        ok: false,
+        status: 404,
+      } as Response)
+    );
+
+    // Set productId
+    element.productId = '999';
+    
+    await expect(element.productTask.task(['999'], new AbortController().signal)).rejects.toThrow('404');
+
+    // Verify the fetch call
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://example.com/product/999',
+      expect.any(Object)
+    );
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+});
+
+
 import { html, css } from 'lit';
 import {
     riskFactorConfig,
