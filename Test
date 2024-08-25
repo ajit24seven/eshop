@@ -1,3 +1,51 @@
+import { expect } from 'chai';
+
+describe('actionEnabler', () => {
+    it('should call the callback with correct parameters when factorScore > 0 and riskVariableRating !== "LOW"', () => {
+        const callback = jest.fn();
+        const detail = {
+            factorScore: 5,
+            riskVariableRating: 'HIGH',
+            callback: callback,
+        };
+
+        actionEnabler(detail);
+
+        expect(callback).to.have.been.calledWith({
+            releaseTask: true,
+            assign: true,
+        });
+    });
+
+    it('should call the callback with correct parameters when factorScore <= 0 and riskVariableRating === "LOW"', () => {
+        const callback = jest.fn();
+        const detail = {
+            factorScore: 0,
+            riskVariableRating: 'LOW',
+            callback: callback,
+        };
+
+        actionEnabler(detail);
+
+        expect(callback).to.have.been.calledWith({
+            releaseTask: false,
+            assign: false,
+        });
+    });
+
+    it('should not call the callback if callback is not provided', () => {
+        const detail = {
+            factorScore: 5,
+            riskVariableRating: 'HIGH',
+        };
+
+        // Ensure the function doesn't throw an error without a callback
+        expect(() => actionEnabler(detail)).not.to.throw();
+    });
+});
+
+
+
 // src/__tests__/my-element.test.js
 import { MyController } from '../my-controller.js';
 import '../my-element.js';
