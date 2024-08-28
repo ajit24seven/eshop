@@ -1,3 +1,50 @@
+
+function buildGraphQLQuery({ 
+    type = 'query', 
+    operationName, 
+    fields, 
+    variables = {}, 
+    arguments = {}
+}) {
+    // Convert variables and arguments objects to string
+    const varsString = Object.keys(variables).map(key => `$${key}: ${variables[key]}`).join(', ');
+    const argsString = Object.keys(arguments).map(key => `${key}: $${key}`).join(', ');
+
+    // Build the fields selection string
+    const fieldsString = fields.map(field => 
+        typeof field === 'string' ? field : `${field.name} { ${field.subfields.join(' ')} }`
+    ).join(' ');
+
+    // Combine everything into the final query string
+    return `
+        ${type} ${operationName ? `${operationName} ` : ''} ${varsString ? `(${varsString})` : ''} {
+            ${operationName ? operationName : ''} ${argsString ? `(${argsString})` : ''} {
+                ${fieldsString}
+            }
+        }
+    `.trim();
+}
+
+// Example usage:
+const query = buildGraphQLQuery({
+    type: 'query',
+    operationName: 'getUser',
+    fields: [
+        'id',
+        'name',
+        { name: 'address', subfields: ['city', 'country'] },
+    ],
+    variables: {
+        id: 'ID!',
+    },
+    arguments: {
+        id: 'id',
+    }
+});
+
+console.log(query);
+
+
 import { html, fixture, expect } from '@open-wc/testing';
 import './table-component.js';
 
