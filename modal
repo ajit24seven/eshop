@@ -143,3 +143,166 @@ export class MyApp extends LitElement {
     });
   }
 }
+
+===========================
+
+import { LitElement, html, css, property } from 'lit-element';
+
+class MyModal extends LitElement {
+  @property({ type: Boolean, reflect: true })
+  open = false;
+
+  @property({ type: String })
+  modalId = '';
+
+  @property({ type: String })
+  title = '';
+
+  @property({ type: String })
+  size = 'md';
+
+  @property({ type: Object })
+  content = html``;
+
+  @property({ type: Object })
+  footer = html``;
+
+  static styles = css`
+    :host([open]) .modal {
+      display: block;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      width: var(--modal-size, 400px);
+    }
+    .modal-content.sm {
+      --modal-size: 300px;
+    }
+    .modal-content.md {
+      --modal-size: 400px;
+    }
+    .modal-content.lg {
+      --modal-size: 600px;
+    }
+  `;
+
+  render() {
+    return html`
+      <div class="modal" @click="${this._handleClickOutside}">
+        <div class="modal-content ${this.size}">
+          <h2>${this.title}</h2>
+          <div class="modal-body">
+            ${this.content}
+          </div>
+          <div class="modal-footer">
+            ${this.footer}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  _handleClickOutside(e) {
+    if (e.target === e.currentTarget) {
+      this.open = false;
+    }
+  }
+}
+
+customElements.define('my-modal', MyModal);
+
+=====
+
+import { LitElement, html } from 'lit-element';
+
+class ModalManager extends LitElement {
+  static get properties() {
+    return {
+      modals: { type: Array }
+    };
+  }
+
+  constructor() {
+    super();
+    this.modals = [];
+  }
+
+  show({ id, title, size, content, footer }) {
+    const modalIndex = this.modals.findIndex(modal => modal.id === id);
+
+    if (modalIndex > -1) {
+      this.modals[modalIndex] = { id, title, size, content, footer };
+    } else {
+      this.modals = [
+        ...this.modals,
+        { id, title, size, content, footer }
+      ];
+    }
+
+    this.requestUpdate();
+  }
+
+  hide(id) {
+    this.modals = this.modals.filter(modal => modal.id !== id);
+    this.requestUpdate();
+  }
+
+  render() {
+    return html`
+      ${this.modals.map(modal => html`
+        <my-modal
+          .open="${true}"
+          .modalId="${modal.id}"
+          .title="${modal.title}"
+          .size="${modal.size}"
+          .content="${modal.content}"
+          .footer="${modal.footer}"
+          @close="${() => this.hide(modal.id)}">
+        </my-modal>
+      `)}
+    `;
+  }
+}
+
+customElements.define('modal-manager', ModalManager);
+
+===
+import { LitElement, html } from 'lit-element';
+import './modal-manager.js'; // Import the ModalManager component
+
+class MyApp extends LitElement {
+  render() {
+    return html`
+      <button @click="${this.openModal}">Open Modal</button>
+      <modal-manager id="modalManager"></modal-manager>
+    `;
+  }
+
+  openModal() {
+    const modalManager = this.shadowRoot.getElementById('modalManager');
+    modalManager.show({
+      id: 'modal1',
+      title: 'My Modal',
+      size: 'md',
+      content: html`<div>This is the modal content.</div>`,
+      footer: html`<button @click="${() => modalManager.hide('modal1')}">OK</button>`
+    });
+  }
+}
+
+customElements.define('my-app', MyApp);
+
+
