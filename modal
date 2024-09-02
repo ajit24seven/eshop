@@ -500,3 +500,182 @@ class MyApp extends LitElement {
 
 
 
+================================
+
+import { LitElement, html, css } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
+import { createContext } from 'lit/directives/context.js';
+
+export const ModalContext = createContext();
+
+@customElement('modal-context-provider')
+class ModalContextProvider extends LitElement {
+  @property({ type: Array }) modals = [];
+
+  static styles = css`
+    /* Add styles if needed */
+  `;
+
+  // Methods to show and hide modals
+  show({ id, title, size = 'md', content = html``, footer = html`` }) {
+    const existingModal = this.modals.find(modal => modal.id === id);
+    if (existingModal) {
+      Object.assign(existingModal, { title, size, content, footer, visible: true });
+    } else {
+      this.modals = [...this.modals, { id, title, size, content, footer, visible: true }];
+    }
+    this.requestUpdate();
+  }
+
+  hide(id) {
+    this.modals = this.modals.map(modal =>
+      modal.id === id ? { ...modal, visible: false } : modal
+    ).filter(modal => modal.visible);
+    this.requestUpdate();
+  }
+
+  render() {
+    return html`
+      <modal-context.Provider value="${this}">
+        <slot></slot>
+        ${this.modals.map(modal => html`
+          <modal-component
+            .id="${modal.id}"
+            .title="${modal.title}"
+            .size="${modal.size}"
+            .content="${modal.content}"
+            .footer="${modal.footer}"
+            .visible="${modal.visible}"
+            @modal-closed="${() => this.hide(modal.id)}"
+          ></modal-component>
+        `)}
+      </modal-context.Provider>
+    `;
+  }
+}
+
+======
+import { LitElement, html, css, property } from 'lit';
+import { customElement } from 'lit/decorators.js';
+
+@customElement('modal-component')
+class ModalComponent extends LitElement {
+  @property({ type: String }) id = '';
+  @property({ type: String }) title = '';
+  @property({ type: Boolean }) visible = false;
+  @property({ type: String }) size = 'md'; // 'sm', 'md', 'lg'
+  @property({ type: Object }) content = html``;
+  @property({ type: Object }) footer = html``;
+
+  static styles = css`
+    /* Basic styles for modal */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.5);
+      transition: opacity 0.3s ease;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .modal.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-content {
+      background: white;
+      padding: 1em;
+      border-radius: 0.5em;
+      max-width: 90vw;
+      max-height: 80vh;
+      overflow: auto;
+      transition: transform 0.3s ease;
+      transform: translateY(-20px);
+    }
+    .modal.show .modal-content {
+      transform: translateY(0);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-footer {
+      margin-top: 1em;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .close-button {
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      font-size: 1.5em;
+    }
+  `;
+
+  render() {
+    return html`
+      <div class="modal ${this.visible ? 'show' : ''}">
+        <div class="modal-content">
+          <div class="modal-header">
+            <span>${this.title}</span>
+            <button class="close-button" @click="${this._close}">&times;</button>
+          </div>
+          <div class="modal-body">
+            ${this.content}
+          </div>
+          <div class="modal-footer">
+            ${this.footer}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  _close() {
+    this.dispatchEvent(new CustomEvent('modal-closed', { detail: { id: this.id } }));
+  }
+}
+
+=======
+
+import { LitElement, html } from 'lit';
+import { customElement } from 'lit/decorators.js';
+import './modal-component.js';
+import './modal-context-provider.js';
+
+@customElement('my-app')
+class MyApp extends LitElement {
+  render() {
+    return html`
+      <modal-context-provider>
+        <button @click="${this.openModal}">Open Modal</button>
+      </modal-context-provider>
+    `;
+  }
+
+  openModal() {
+    const modalContext = this.renderRoot.querySelector('modal-context-provider');
+    modalContext.show({
+      id: 'modal1',
+      title: 'Dynamic Modal',
+      size: 'md',
+      content: html`<div>Dynamic content here</div>`,
+      footer: html`<div><button @click="${this.closeModal}">OK</button></div>`
+    });
+  }
+
+  closeModal() {
+    const modalContext = this.renderRoot.querySelector('modal-context-provider');
+    modalContext.hide('modal1');
+  }
+}
+
+
+
