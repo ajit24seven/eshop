@@ -1,0 +1,211 @@
+// modal-manager.js
+export class ModalManager {
+  constructor() {
+    this.modals = new Map();
+    this.openModals = new Set();
+  }
+
+  register(id, modal) {
+    this.modals.set(id, modal);
+  }
+
+  unregister(id) {
+    this.modals.delete(id);
+    this.openModals.delete(id);
+  }
+
+  show({ id, title, size, content, footer }) {
+    const modal = this.modals.get(id);
+    if (modal) {
+      modal.show({ title, size, content, footer });
+      this.openModals.add(id);
+    }
+  }
+
+  hide(id) {
+    const modal = this.modals.get(id);
+    if (modal) {
+      modal.hide();
+      this.openModals.delete(id);
+    }
+  }
+
+  hideAll() {
+    for (const id of this.openModals) {
+      this.hide(id);
+    }
+  }
+
+  getModal(id) {
+    return this.modals.get(id);
+  }
+}
+
+export const modalManager = new ModalManager();
+
+
+============
+
+
+// my-modal.js
+import { LitElement, html, css, property } from 'lit';
+import { customElement, query } from 'lit/decorators.js';
+import { modalManager } from './modal-manager.js';
+
+@customElement('my-modal')
+export class MyModal extends LitElement {
+  @property({ type: Boolean, reflect: true }) open = false;
+  @property({ type: String }) id = '';
+  @property({ type: String }) title = '';
+  @property({ type: String }) size = 'md';
+  @property({ type: Object }) content = html``;
+  @property({ type: Object }) footer = html``;
+
+  static styles = css`
+    :host {
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+      z-index: 1000; /* Ensure the modal is above other content */
+    }
+
+    :host([open]) {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .modal {
+      position: absolute;
+      margin: auto;
+      top: 10%;
+      left: 50%;
+      transform: translate(-50%, 0);
+      background: white;
+      border-radius: 4px;
+      width: 80%;
+      max-width: 600px;
+      padding: 1em;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .header, .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header {
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 0.5em;
+    }
+
+    .footer {
+      border-top: 1px solid #ddd;
+      padding-top: 0.5em;
+    }
+
+    .close-button {
+      background: transparent;
+      border: none;
+      font-size: 1.2em;
+      cursor: pointer;
+    }
+  `;
+
+  constructor() {
+    super();
+    modalManager.register(this.id, this);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    modalManager.unregister(this.id);
+  }
+
+  show({ title, size, content, footer }) {
+    this.title = title || '';
+    this.size = size || 'md';
+    this.content = content || html``;
+    this.footer = footer || html``;
+    this.open = true;
+  }
+
+  hide() {
+    this.open = false;
+  }
+
+  render() {
+    return html`
+      <div class="modal">
+        <div class="header">
+          <span>${this.title}</span>
+          <button class="close-button" @click="${this.hide}">&times;</button>
+        </div>
+        <div class="content">
+          ${this.content}
+        </div>
+        <div class="footer">
+          ${this.footer}
+        </div>
+      </div>
+    `;
+  }
+}
+
+
+=========
+
+// modal-service.js
+import { modalManager } from './modal-manager.js';
+
+export class ModalService {
+  static showModal(id, options) {
+    modalManager.show({ id, ...options });
+  }
+
+  static hideModal(id) {
+    modalManager.hide(id);
+  }
+
+  static hideAllModals() {
+    modalManager.hideAll();
+  }
+}
+
+==========
+
+// app.js
+import { LitElement, html } from 'lit';
+import { customElement } from 'lit/decorators.js';
+import './my-modal.js'; // Import the modal component
+import { ModalService } from './modal-service.js';
+
+@customElement('my-app')
+export class MyApp extends LitElement {
+  showModal() {
+    ModalService.showModal('modal1', {
+      title: 'My Modal',
+      size: 'md',
+      content: html`<div>This is dynamic content!</div>`,
+      footer: html`<button @click="${this.closeModal}">OK</button>`
+    });
+  }
+
+  closeModal() {
+    ModalService.hideModal('modal1');
+  }
+
+  render() {
+    return html`
+      <button @click="${this.showModal}">Show Modal</button>
+      <my-modal id="modal1"></my-modal>
+    `;
+  }
+}
