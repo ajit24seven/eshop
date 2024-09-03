@@ -1,0 +1,242 @@
+// modal-manager.js
+export class ModalManager {
+  constructor() {
+    this.modals = new Map();
+    this.openModals = [];
+  }
+
+  register(id, modal) {
+    if (this.modals.has(id)) {
+      console.warn(`Modal with id ${id} is already registered.`);
+      return;
+    }
+    this.modals.set(id, modal);
+  }
+
+  unregister(id) {
+    this.modals.delete(id);
+    this.openModals = this.openModals.filter(modalId => modalId !== id);
+  }
+
+  show({ id, title, size, content, footer }) {
+    const modal = this.modals.get(id);
+    if (!modal) {
+      console.error(`Modal with id ${id} not found.`);
+      return;
+    }
+
+    // Set the modal as open and manage stacking
+    modal.show({ title, size, content, footer });
+    this.openModals.push(id);
+    this.updateStacking();
+  }
+
+  hide(id) {
+    const modal = this.modals.get(id);
+    if (modal) {
+      modal.hide();
+      this.openModals = this.openModals.filter(modalId => modalId !== id);
+      this.updateStacking();
+    }
+  }
+
+  hideAll() {
+    this.openModals.forEach(id => this.hide(id));
+  }
+
+  updateStacking() {
+    this.openModals.forEach((id, index) => {
+      const modal = this.modals.get(id);
+      if (modal) {
+        modal.style.zIndex = 1000 + index;
+      }
+    });
+  }
+
+  getModal(id) {
+    return this.modals.get(id);
+  }
+}
+
+export const modalManager = new ModalManager();
+
+
+==========
+
+// my-modal.js
+import { LitElement, html, css, property } from 'lit';
+import { customElement } from 'lit/decorators.js';
+import { modalManager } from './modal-manager.js';
+
+@customElement('my-modal')
+export class MyModal extends LitElement {
+  @property({ type: Boolean, reflect: true }) open = false;
+  @property({ type: String }) id = '';
+  @property({ type: String }) title = '';
+  @property({ type: String }) size = 'md';
+  @property({ type: Object }) content = html``;
+  @property({ type: Object }) footer = html``;
+
+  static styles = css`
+    :host {
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+      z-index: 1000; /* Base level for stacking */
+    }
+
+    :host([open]) {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .modal {
+      position: absolute;
+      margin: auto;
+      top: 10%;
+      left: 50%;
+      transform: translate(-50%, 0);
+      background: white;
+      border-radius: 4px;
+      width: 80%;
+      max-width: 600px;
+      padding: 1em;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .header, .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header {
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 0.5em;
+    }
+
+    .footer {
+      border-top: 1px solid #ddd;
+      padding-top: 0.5em;
+    }
+
+    .close-button {
+      background: transparent;
+      border: none;
+      font-size: 1.2em;
+      cursor: pointer;
+    }
+  `;
+
+  constructor() {
+    super();
+    if (this.id) {
+      modalManager.register(this.id, this);
+    }
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    modalManager.unregister(this.id);
+  }
+
+  show({ title, size, content, footer }) {
+    this.title = title || '';
+    this.size = size || 'md';
+    this.content = content || html``;
+    this.footer = footer || html``;
+    this.open = true;
+    this.focus();
+  }
+
+  hide() {
+    this.open = false;
+    this.blur();
+  }
+
+  render() {
+    return html`
+      <div class="modal" role="dialog" aria-labelledby="modal-title" aria-modal="true">
+        <div class="header">
+          <span id="modal-title">${this.title}</span>
+          <button class="close-button" @click="${this.hide}" aria-label="Close">&times;</button>
+        </div>
+        <div class="content">
+          ${this.content}
+        </div>
+        <div class="footer">
+          ${this.footer}
+        </div>
+      </div>
+    `;
+  }
+}
+
+=========
+
+// modal-service.js
+import { modalManager } from './modal-manager.js';
+
+export class ModalService {
+  static show(id, options) {
+    modalManager.show(id, options);
+  }
+
+  static hide(id) {
+    modalManager.hide(id);
+  }
+
+  static hideAll() {
+    modalManager.hideAll();
+  }
+}
+
+========
+
+// app.js
+import { LitElement, html, css } from 'lit';
+import { customElement } from 'lit/decorators.js';
+import './my-modal.js'; // Import the modal component
+import { ModalService } from './modal-service.js';
+
+@customElement('my-app')
+export class MyApp extends LitElement {
+  static styles = css`
+    button {
+      padding: 0.5em 1em;
+      font-size: 1em;
+      cursor: pointer;
+    }
+  `;
+
+  showModal(id, title, content) {
+    ModalService.show(id, {
+      title: title,
+      size: 'md',
+      content: html`<div>${content}</div>`,
+      footer: html`<button @click="${() => this.closeModal(id)}">OK</button>`
+    });
+  }
+
+  closeModal(id) {
+    ModalService.hide(id);
+  }
+
+  render() {
+    return html`
+      <button @click="${() => this.showModal('modal1', 'First Modal', 'Content for the first modal')}">Show First Modal</button>
+      <button @click="${() => this.showModal('modal2', 'Second Modal', 'Content for the second modal')}">Show Second Modal</button>
+      <my-modal id="modal1"></my-modal>
+      <my-modal id="modal2"></my-modal>
+    `;
+  }
+}
