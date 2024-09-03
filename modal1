@@ -1,0 +1,150 @@
+// my-modal.js
+import { LitElement, html, css, property } from 'lit';
+import { customElement } from 'lit/decorators.js';
+
+@customElement('my-modal')
+class MyModal extends LitElement {
+  @property({ type: Boolean, reflect: true }) visible = false;
+  @property({ type: String }) id = '';
+  @property({ type: String }) title = '';
+  @property({ type: String }) size = 'md';
+  @property({ type: Object }) content = html``;
+  @property({ type: Object }) footer = html``;
+
+  static styles = css`
+    :host {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    :host([visible]) {
+      display: flex;
+    }
+    .modal-content {
+      background: white;
+      padding: 1em;
+      border-radius: 0.5em;
+      max-width: 90%;
+      max-height: 80%;
+      overflow: auto;
+      position: relative;
+    }
+    .modal-header,
+    .modal-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5em 1em;
+    }
+    .modal-body {
+      padding: 1em;
+    }
+    .close-button {
+      cursor: pointer;
+      font-size: 1.5em;
+    }
+  `;
+
+  render() {
+    return html`
+      <div class="modal-content">
+        <div class="modal-header">
+          <span>${this.title}</span>
+          <span class="close-button" @click="${this._hide}">&times;</span>
+        </div>
+        <div class="modal-body">${this.content}</div>
+        <div class="modal-footer">${this.footer}</div>
+      </div>
+    `;
+  }
+
+  _hide() {
+    this.visible = false;
+  }
+}
+
+
+========
+
+// modal-manager.js
+import { html, render } from 'lit';
+import './my-modal.js';
+
+class ModalManager {
+  static instance;
+
+  constructor() {
+    if (ModalManager.instance) {
+      return ModalManager.instance;
+    }
+
+    this.modals = new Map();
+    this.container = document.createElement('div');
+    document.body.appendChild(this.container);
+    ModalManager.instance = this;
+  }
+
+  static getInstance() {
+    return new ModalManager();
+  }
+
+  show({ id, title = '', size = 'md', content = html``, footer = html`` }) {
+    let modal = this.modals.get(id);
+
+    if (!modal) {
+      modal = document.createElement('my-modal');
+      modal.id = id;
+      this.container.appendChild(modal);
+      this.modals.set(id, modal);
+    }
+
+    modal.title = title;
+    modal.size = size;
+    modal.content = content;
+    modal.footer = footer;
+    modal.visible = true;
+  }
+
+  hide(id) {
+    const modal = this.modals.get(id);
+    if (modal) {
+      modal.visible = false;
+    }
+  }
+}
+
+export const modalManager = ModalManager.getInstance();
+
+
+=======
+
+// app.js
+import { html, LitElement } from 'lit';
+import { customElement } from 'lit/decorators.js';
+import { modalManager } from './modal-manager.js';
+
+@customElement('my-app')
+class MyApp extends LitElement {
+  render() {
+    return html`
+      <button @click="${this._openModal}">Open Modal</button>
+    `;
+  }
+
+  _openModal() {
+    modalManager.show({
+      id: 'modal1',
+      title: 'My Modal',
+      size: 'md',
+      content: html`<p>This is the content of the modal.</p>`,
+      footer: html`<button @click="${() => modalManager.hide('modal1')}">Close</button>`
+    });
+  }
+}
