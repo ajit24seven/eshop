@@ -1,0 +1,33 @@
+// src/components/BaseStatefulElement.js
+import { LitElement } from 'lit-element';
+import { property } from 'lit-element';
+import useModalStore from '../store/modalStore';
+
+export class BaseStatefulElement extends LitElement {
+    @property({ type: Object }) storeState = {};
+
+    constructor() {
+        super();
+        this.unsubscribe = null;
+    }
+
+    firstUpdated() {
+        super.firstUpdated();
+        this.setupStoreSubscription();
+    }
+
+    setupStoreSubscription() {
+        // Subscribe to store and update component state
+        this.unsubscribe = useModalStore.subscribe((state) => {
+            this.storeState = state;
+            this.requestUpdate();
+        });
+    }
+
+    disconnectedCallback() {
+        super.disconnectedCallback();
+        if (this.unsubscribe) {
+            this.unsubscribe(); // Unsubscribe to prevent memory leaks
+        }
+    }
+}
