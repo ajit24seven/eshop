@@ -1,0 +1,76 @@
+// Utility functions
+function equal(value: any, expectedValue: any): boolean {
+  return JSON.stringify(value) === JSON.stringify(expectedValue);
+}
+
+function isEmpty(value: any): boolean {
+  return (
+    value === null ||
+    value === undefined ||
+    (Array.isArray(value) && value.length === 0) ||
+    (typeof value === 'object' && Object.keys(value).length === 0)
+  );
+}
+
+function isNotEmpty(value: any): boolean {
+  return !isEmpty(value);
+}
+
+// Rule operator functions
+function equalOp(value: any, expectedValue: any): boolean {
+  return equal(value, expectedValue);
+}
+
+function notEqual(value: any, expectedValue: any): boolean {
+  return !equal(value, expectedValue);
+}
+
+function inArray(value: any, expectedValue: any[]): boolean {
+  return expectedValue.includes(value);
+}
+
+function notInArray(value: any, expectedValue: any[]): boolean {
+  return !expectedValue.includes(value);
+}
+
+function arrayIncludes(value: any[], expectedValue: any): boolean {
+  if (!Array.isArray(value)) {
+    return false;
+  }
+  return value.includes(expectedValue);
+}
+
+function arrayExcludes(value: any[], expectedValue: any): boolean {
+  return !value.includes(expectedValue);
+}
+
+function only(value: any[], expectedValue: any[]): boolean {
+  if (!isEmpty(value) && !isEmpty(expectedValue)) {
+    return (
+      value.length === expectedValue.length &&
+      equal(value, expectedValue)
+    );
+  }
+  return false;
+}
+
+function empty(value: any): boolean {
+  return isEmpty(value);
+}
+
+function notEmpty(value: any): boolean {
+  return isNotEmpty(value);
+}
+
+// Exporting the rule operators as an object
+export const ruleOperator = {
+  equal: equalOp,
+  notEqual,
+  inArray,
+  notInArray,
+  arrayIncludes,
+  arrayExcludes,
+  only,
+  empty,
+  notEmpty,
+};
