@@ -1,0 +1,42 @@
+import { isEmpty } from '@/mt/utils';
+import { BaseController } from './base-controller';
+import { ReactiveControllerHost } from 'lit';
+
+const conditionalProperties = ['visible'];
+
+// Define the interface for dependencies if needed
+interface Dependable {
+  registerDependants(): void;
+  handleUnsubscribe(): void;
+}
+
+interface SectionControllerOptions {
+  host: ReactiveControllerHost;
+}
+
+export class SectionController extends BaseController implements Dependable {
+  private host: ReactiveControllerHost;
+
+  constructor({ host }: SectionControllerOptions) {
+    super();
+    this.host = host;
+    host.addController(this);
+  }
+
+  init(): void {
+    this.registerDependants();
+  }
+
+  hostDisconnected(): void {
+    this.handleUnsubscribe();
+  }
+
+  // Dummy implementations - replace with real logic
+  registerDependants(): void {
+    console.log('Registering dependants...');
+  }
+
+  handleUnsubscribe(): void {
+    console.log('Handling unsubscribe...');
+  }
+}
