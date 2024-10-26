@@ -1,0 +1,70 @@
+// Interface for FormController with methods used in the class
+interface FormController {
+  insert(index: number, value: any): void;
+  push(value: any): void;
+  pop(): void;
+  remove(index: number): void;
+  removeBatch(indexes: number[]): void;
+  unshift(value: any): void;
+  updateRecord(value: any): void;
+}
+
+// Interface for the handlers
+interface Handlers {
+  insert: (index: number, value: any) => void;
+  push: (value: any) => void;
+  pop: () => void;
+  remove: (index: number) => void;
+  removeBatch: (indexes: number[]) => void;
+  unshift: (value: any) => void;
+  updateRecord: (value: any) => void;
+}
+
+// Example class implementing the logic and interfaces
+class MyFormController {
+  private formController: FormController;
+
+  constructor(formController: FormController) {
+    this.formController = formController;
+  }
+
+  private insert = (index: number, value: any) => {
+    this.formController.insert(index, value);
+  }
+
+  private push = (value: any) => {
+    this.formController.push(value);
+  }
+
+  private pop = () => {
+    this.formController.pop();
+  }
+
+  private remove = (index: number) => {
+    this.formController.remove(index);
+  }
+
+  private removeBatch = (indexes: number[]) => {
+    this.formController.removeBatch(indexes);
+  }
+
+  private unshift = (value: any) => {
+    this.formController.unshift(value);
+  }
+
+  private updateRecord = (value: any) => {
+    this.formController.updateRecord(value);
+  }
+
+  get handlers(): Handlers {
+    return {
+      insert: this.insert,
+      push: this.push,
+      pop: this.pop,
+      remove: this.remove,
+      removeBatch: this.removeBatch,
+      unshift: this.unshift,
+      updateRecord: this.updateRecord,
+    };
+  }
+}
