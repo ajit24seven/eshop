@@ -1,0 +1,236 @@
+import { ReactiveController, ReactiveControllerHost } from "lit";
+
+// Define the interface for dependencies if needed
+export interface IBaseController extends ReactiveController {
+    host: ReactiveControllerHost | any;
+    unsubscribes:any[];
+    formValue:any;
+    fieldState:any;
+    isFormSubmitFailed:any;
+    config:any;
+    formController:any;
+    meta:any;
+    id:string;
+    value:string;
+    visible:boolean;
+    conditionalProperties:string[];
+    initialize(options:any):void;
+    registerDependants():void;
+    handleUnsubscribe():void;
+}
+
+export class BaseController implements IBaseController {
+    host: ReactiveControllerHost | any;
+    unsubscribes:any[] = [];
+    formValue:any = {};
+    fieldState:any = {};
+    isFormSubmitFailed:any = null;
+    config:any = null;
+    formController:any = null;
+    meta:any = {};
+    id:string;
+    conditionalProperties:string[] = ["visible"];
+
+    get dependants() {
+        return getDependants(this.config, this.conditionalProperties, this.config.property);
+    }
+
+    get submitfailed() {
+        return this.fieldState.getState().submitFailed;
+    }
+
+    get value(): string {
+        return this.fieldState?.value;
+    }
+}
+
+
+≈======
+
+import { BaseController } from './path_to_your_controller';
+
+describe('BaseController', () => {
+    let controller: BaseController;
+
+    beforeEach(() => {
+        controller = new BaseController();
+    });
+
+    it('should initialize with default values', () => {
+        expect(controller.unsubscribes).toEqual([]);
+        expect(controller.formValue).toEqual({});
+        expect(controller.fieldState).toEqual({});
+        expect(controller.isFormSubmitFailed).toBeNull();
+        expect(controller.config).toBeNull();
+        expect(controller.formController).toBeNull();
+        expect(controller.meta).toEqual({});
+        expect(controller.conditionalProperties).toEqual(["visible"]);
+    });
+
+    it('should return the correct dependants', () => {
+        const mockConfig = { property: 'testProperty' };
+        const getDependantsMock = jest.fn();
+        controller.config = mockConfig;
+
+        // Mock the getDependants function
+        global.getDependants = getDependantsMock;
+
+        controller.dependants;
+
+        // Verify that getDependants is called with the correct arguments
+        expect(getDependantsMock).toHaveBeenCalledWith(
+            controller.config,
+            controller.conditionalProperties,
+            controller.config.property
+        );
+    });
+
+    it('should return the submitFailed value from fieldState', () => {
+        const mockFieldState = { getState: jest.fn(() => ({ submitFailed: true })) };
+        controller.fieldState = mockFieldState;
+
+        expect(controller.submitfailed).toBe(true);
+        expect(mockFieldState.getState).toHaveBeenCalled();
+    });
+
+    it('should return the correct value from fieldState', () => {
+        controller.fieldState = { value: 'testValue' };
+
+        expect(controller.value).toBe('testValue');
+    });
+
+    it('should return undefined when fieldState is not set', () => {
+        controller.fieldState = null;
+
+        expect(controller.value).toBeUndefined();
+    });
+});
+
+=====
+
+import { ReactiveController, ReactiveControllerHost } from 'lit';
+
+export class BaseController implements ReactiveController {
+  host: ReactiveControllerHost;
+  fieldState: any = { value: '' };
+  submitFailed: boolean = false;
+
+  constructor(host: ReactiveControllerHost) {
+    this.host = host;
+    this.host.addController(this);
+  }
+
+  hostConnected() {
+    // Simulate some initialization logic
+    this.fieldState.value = 'Initial Value';
+  }
+
+  hostDisconnected() {
+    // Simulate cleanup if needed
+  }
+
+  failSubmit() {
+    this.submitFailed = true;
+    this.host.requestUpdate(); // Trigger a render or update on the host
+  }
+
+  get value() {
+    return this.fieldState?.value;
+  }
+}
+====
+import { ReactiveControllerHost } from 'lit';
+import { expect } from '@open-wc/testing';
+import { BaseController } from './BaseController'; // Adjust the path accordingly
+
+class MockHost implements ReactiveControllerHost {
+  private updateRequested = false;
+  
+  addController() {
+    // Mock implementation of adding the controller
+  }
+
+  removeController() {
+    // Mock implementation of removing the controller
+  }
+
+  requestUpdate() {
+    // Simulate requestUpdate being called
+    this.updateRequested = true;
+  }
+
+  wasUpdateRequested() {
+    return this.updateRequested;
+  }
+}
+
+describe('BaseController', () => {
+  let host: MockHost;
+  let controller: BaseController;
+
+  beforeEach(() => {
+    host = new MockHost();
+    controller = new BaseController(host);
+  });
+
+  it('should initialize with default values', () => {
+    expect(controller.fieldState).to.deep.equal({ value: '' });
+    expect(controller.submitFailed).to.be.false;
+  });
+
+  it('should set value on hostConnected', () => {
+    controller.hostConnected();
+    expect(controller.value).to.equal('Initial Value');
+  });
+
+  it('should update submitFailed and trigger host update when failSubmit is called', () => {
+    controller.failSubmit();
+    expect(controller.submitFailed).to.be.true;
+    expect(host.wasUpdateRequested()).to.be.true;
+  });
+
+  it('should get the correct value from fieldState', () => {
+    controller.fieldState = { value: 'Test Value' };
+    expect(controller.value).to.equal('Test Value');
+  });
+
+  it('should return undefined if fieldState is not set', () => {
+    controller.fieldState = null;
+    expect(controller.value).to.be.undefined;
+  });
+});
+
+====
+
+import { ReactiveControllerHost } from 'lit';
+import { expect } from '@open-wc/testing';
+import sinon from 'sinon';
+import { BaseController } from './BaseController'; // Adjust the path accordingly
+
+describe('BaseController (with sinon spies)', () => {
+  let host: ReactiveControllerHost;
+  let controller: BaseController;
+  let requestUpdateSpy: sinon.SinonSpy;
+
+  beforeEach(() => {
+    // Create a mock host
+    host = { addController() {}, removeController() {}, requestUpdate() {} };
+    requestUpdateSpy = sinon.spy(host, 'requestUpdate');
+
+    controller = new BaseController(host);
+  });
+
+  it('should call requestUpdate when failSubmit is triggered', () => {
+    controller.failSubmit();
+    expect(controller.submitFailed).to.be.true;
+    expect(requestUpdateSpy.calledOnce).to.be.true;
+  });
+
+  it('should initialize with default values', () => {
+    expect(controller.fieldState.value).to.equal('');
+    expect(controller.submitFailed).to.be.false;
+  });
+});
+
+=====
+
