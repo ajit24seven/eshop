@@ -1,0 +1,87 @@
+import { ControlController } from './ControlController'; // Adjust the path as needed
+import { ReactiveControllerHost } from 'lit';
+
+describe('ControlController', () => {
+  let controller;
+  let mockHost;
+  let mockFormController;
+
+  beforeEach(() => {
+    mockHost = {
+      addController: jest.fn(),
+      requestUpdate: jest.fn(),
+    };
+    mockFormController = {
+      getFormState: jest.fn(() => ({
+        submitFailed: false,
+        modifiedSinceLastSubmit: false,
+        values: {},
+      })),
+      register: jest.fn((id, callback) => {
+        return {
+          unsubscribe: jest.fn(),
+        };
+      }),
+    };
+    controller = new ControlController(mockHost);
+    controller.formController = mockFormController;
+  });
+
+  describe('initialize', () => {
+    test('should set initial form state flags', () => {
+      controller.initialize({});
+      expect(controller.isFormSubmitFailed).toBe(false);
+      expect(controller.modifiedSinceLastSubmit).toBe(false);
+    });
+
+    test('should register field and set up state', () => {
+      controller.initialize({});
+      expect(mockFormController.register).toHaveBeenCalled();
+      const registerCallback = mockFormController.register.mock.calls[0][1];
+      const fieldState = { value: 'testValue' };
+      registerCallback(fieldState);
+
+      expect(controller.fieldState).toBe(fieldState);
+      expect(controller.formValue).toEqual({});
+      expect(mockHost.requestUpdate).toHaveBeenCalled();
+    });
+
+    test('should add unsubscribe handler for form registration', () => {
+      controller.initialize({});
+      expect(controller.unsubscribes.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('registerDependants', () => {
+    beforeEach(() => {
+      controller.dependants = ['field1', 'field2'];
+    });
+
+    test('should register each dependant', () => {
+      controller.registerDependants();
+      expect(mockFormController.register).toHaveBeenCalledTimes(controller.dependants.length);
+    });
+
+    test('should update formValue and handle visibility logic', () => {
+      controller.visible = false;
+      controller.registerDependants();
+
+      const dependantCallback = mockFormController.register.mock.calls[0][1];
+      controller.value = 'testValue';
+      dependantCallback();
+
+      expect(controller.formValue).toEqual({});
+      expect(controller.fieldState.change).toHaveBeenCalledWith(null);
+    });
+
+    test('should call requestUpdate if visible is true', () => {
+      controller.visible = true;
+      controller.registerDependants();
+
+      const dependantCallback = mockFormController.register.mock.calls[0][1];
+      dependantCallback();
+
+      expect(mockHost.requestUpdate).toHaveBeenCalled();
+    });
+  });
+});
