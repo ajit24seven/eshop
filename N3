@@ -1,0 +1,60 @@
+import { ControlController } from './ControlController'; // Adjust the path as needed
+import { ReactiveControllerHost } from 'lit';
+
+describe('ControlController', () => {
+  let controller;
+  let mockHost;
+
+  beforeEach(() => {
+    mockHost = {
+      addController: jest.fn(),
+      requestUpdate: jest.fn(),
+    };
+    controller = new ControlController(mockHost);
+  });
+
+  describe('Initialization', () => {
+    test('should initialize with default properties', () => {
+      expect(controller.isFormSubmitFailed).toBe(false);
+      expect(controller.modifiedSinceLastSubmit).toBe(false);
+      expect(controller.controlProperties).toEqual(["visible", "readOnly", "required"]);
+    });
+
+    test('should add controller to host on initialization', () => {
+      expect(mockHost.addController).toHaveBeenCalledWith(controller);
+    });
+  });
+
+  describe('formStateChangeListener', () => {
+    test('should update isFormSubmitFailed on formStateChangeListener', () => {
+      const mockEvent = { submitFailed: true };
+      controller.formStateChangeListener(mockEvent);
+      expect(controller.isFormSubmitFailed).toBe(true);
+      expect(mockHost.requestUpdate).toHaveBeenCalled();
+    });
+
+    test('should update modifiedSinceLastSubmit on formStateChangeListener', () => {
+      const mockEvent = { modifiedSinceLastSubmit: true };
+      controller.formStateChangeListener(mockEvent);
+      expect(controller.modifiedSinceLastSubmit).toBe(true);
+      expect(mockHost.requestUpdate).toHaveBeenCalled();
+    });
+  });
+
+  describe('onValidate', () => {
+    test('should validate required field correctly', () => {
+      controller.required = true;
+      const result = controller.onValidate(null);
+      expect(result).toBe('This field is required.');
+    });
+  });
+
+  describe('change', () => {
+    test('should handle change event correctly', () => {
+      const mockValue = 'new value';
+      controller.fieldState = { change: jest.fn() };
+      controller.change(mockValue);
+      expect(controller.fieldState.change).toHaveBeenCalledWith(mockValue);
+    });
+  });
+});
