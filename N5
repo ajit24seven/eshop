@@ -1,0 +1,142 @@
+// @ts-ignore
+import { isEmpty, isNotEmpty } from "@clmt/utils";
+import { BaseController, IBaseController } from "./base-controller";
+import { ReactiveControllerHost } from "lit";
+
+// Define the interface for dependencies if needed
+interface IControlController extends IBaseController {
+  errorMessage: any;
+  customEvents: any;
+  value: string;
+  formStateChangeListener(): void;
+  hostDisconnected(): void;
+  onValidate(value: string): string | undefined;
+  change(e: any): void;
+  isFormSubmitFailed: boolean;
+  modifiedSinceLastSubmit: boolean;
+  fieldState: any;
+}
+
+export class ControlController extends BaseController implements IControlController {
+  isFormSubmitFailed: any = false;
+  modifiedSinceLastSubmit: boolean = false;
+  fieldState: any;
+  conditionalProperties: string[] = ["visible", "readOnly", "required"];
+
+  constructor(host: ReactiveControllerHost) {
+    super();
+    this.host = host;
+    host.addController(this);
+  }
+
+  get value(): string {
+    return this.fieldState?.value;
+  }
+
+  get errorMessage(): any {
+    const { error } = this.fieldState;
+    if (error && (this.isFormSubmitFailed || this.modifiedSinceLastSubmit)) {
+      return error;
+    }
+    return null;
+  }
+
+  get customEvents(): any {
+    return this.config.events || [];
+  }
+}
+initialize(options: any): void {
+  super.initialize(options);
+  this.isFormSubmitFailed = this.formController.getFormState().submitFailed;
+  this.modifiedSinceLastSubmit = this.formController.getFormState().modifiedSinceLastSubmit;
+  if (this.id) {
+    this.unsubscribes.push(
+      this.formController.register(
+        this.id,
+        (fieldState: any) => {
+          this.fieldState = fieldState;
+          this.formValue = this.formController.getFormState().values;
+          this.host.requestUpdate();
+        },
+        {
+          value: true,
+          valid: true,
+          dirty: true,
+          error: true,
+          getValidator: () => this.onValidate,
+          validateFields: [],
+        }
+      )
+    );
+  }
+  this.formStateChangeListener();
+  this.registerDependants();
+}
+
+registerDependants = (): void => {
+  for (const x of this.dependants) {
+    this.unsubscribes.push(
+      this.formController.register(
+        x,
+        () => {
+          this.formValue = this.formController.getFormState().values;
+          if (!this.visible && isNotEmpty(this.value)) {
+            this.fieldState.change(null);
+          } else {
+            this.host.requestUpdate();
+          }
+        },
+        { value: true }
+      )
+    );
+  }
+};
+
+formStateChangeListener = (): void => {
+  this.unsubscribes.push(
+    this.formController.subscribe((e: any) => {
+      if (this.isFormSubmitFailed !== e.submitFailed) {
+        this.isFormSubmitFailed = e.submitFailed;
+        this.host.requestUpdate();
+      }
+      if (this.modifiedSinceLastSubmit !== e.modifiedSinceLastSubmit) {
+        this.modifiedSinceLastSubmit = e.modifiedSinceLastSubmit;
+        this.host.requestUpdate();
+      }
+    })
+  );
+};
+
+formStateChangeListener = (): void => {
+  this.unsubscribes.push(
+    this.formController.subscribe((e: any) => {
+      if (this.isFormSubmitFailed !== e.submitFailed) {
+        this.isFormSubmitFailed = e.submitFailed;
+        this.host.requestUpdate();
+      }
+      if (this.modifiedSinceLastSubmit !== e.modifiedSinceLastSubmit) {
+        this.modifiedSinceLastSubmit = e.modifiedSinceLastSubmit;
+        this.host.requestUpdate();
+      }
+    }, {
+      submitFailed: true,
+      modifiedSinceLastSubmit: true
+    })
+  );
+};
+
+hostDisconnected(): void {
+  this.handleUnsubscribe();
+}
+
+onValidate = (newValue: any): string | undefined => {
+  if (this.required && isEmpty(newValue)) {
+    return "This field is required";
+  }
+};
+
+change = (value: any) => {
+  if (this.fieldState) {
+    this.fieldState.change(value);
+  }
+};
