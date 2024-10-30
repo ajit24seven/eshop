@@ -155,4 +155,77 @@ describe('BaseController', () => {
         expect(controller.visible).toBe(false);
         expect(controller.formController.executeRule).toHaveBeenCalledWith('someRule');
     });
+})
+
+===
+
+import { BaseController } from './base-controller';
+
+describe('BaseController', () => {
+    let controller: BaseController;
+
+    beforeEach(() => {
+        controller = new BaseController();
+        controller.config = {
+            property: 'testProperty',
+            visible: true,
+        };
+        controller.formController = {
+            executeRule: jest.fn().mockReturnValue(true),
+        };
+    });
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    describe('initialization', () => {
+        it('should initialize with default values', () => {
+            expect(controller.unsubscribes).toEqual([]);
+            expect(controller.formValue).toEqual({});
+            expect(controller.config).toEqual({
+                property: 'testProperty',
+                visible: true,
+            });
+            expect(controller.formController).toBeDefined();
+            expect(controller.meta).toEqual({});
+            expect(controller.conditionalProperties).toEqual(['visible']);
+        });
+    });
+
+    describe('dependants', () => {
+        it('should return correct dependants', () => {
+            const mockDependants = ['dependant1', 'dependant2'];
+            jest.mock('./utils', () => ({
+                getDependants: jest.fn().mockReturnValue(mockDependants),
+            }));
+            
+            expect(controller.dependants).toEqual(mockDependants);
+        });
+    });
+
+    describe('id', () => {
+        it('should return the correct id from config property', () => {
+            expect(controller.id).toBe('testProperty');
+        });
+    });
+
+    describe('visible', () => {
+        it('should return true if config visible is undefined or true', () => {
+            // Case when visible is set to true
+            expect(controller.visible).toBe(true);
+
+            // Case when visible is undefined
+            controller.config.visible = undefined;
+            expect(controller.visible).toBe(true);
+        });
+
+        it('should execute rule if config visible is set and return its result', () => {
+            controller.config.visible = 'someRule';
+            controller.formController.executeRule = jest.fn().mockReturnValue(false);
+
+            expect(controller.visible).toBe(false);
+            expect(controller.formController.executeRule).toHaveBeenCalledWith('someRule');
+        });
+    });
 });
