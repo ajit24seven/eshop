@@ -1,0 +1,110 @@
+import { ControlController } from './control-controller';
+import { ReactiveControllerHost } from 'lit';
+
+describe('ControlController', () => {
+  let host;
+  let formController;
+  let controller;
+
+  beforeEach(() => {
+    // Mocking ReactiveControllerHost and formController
+    host = {
+      requestUpdate: jest.fn(),
+      addController: jest.fn(),
+    };
+    
+    formController = {
+      getFormState: jest.fn(() => ({
+        submitFailed: false,
+        modifiedSinceLastSubmit: false,
+        values: {},
+      })),
+      register: jest.fn(),
+      subscribe: jest.fn(),
+    };
+
+    controller = new ControlController(host);
+    controller.formController = formController; // Set formController for the controller
+  });
+
+  describe('initialize', () => {
+    it('should initialize the controller with provided options', () => {
+      const options = {
+        config: {
+          property: 'testprop',
+          visible: true,
+          required: true,
+          formController: formController,
+        },
+      };
+      
+      controller.initialize(options);
+      
+      expect(controller.isFormSubmitFailed).toBe(false);
+      expect(controller.modifiedSinceLastSubmit).toBe(false);
+      expect(formController.register).toHaveBeenCalled();
+      expect(host.requestUpdate).toHaveBeenCalled();
+    });
+  });
+
+  describe('formStateChangeListener', () => {
+    it('should update isFormSubmitFailed and modifiedSinceLastSubmit on state change', () => {
+      const stateChangeCallback = formController.subscribe.mock.calls[0][0];
+      
+      // Simulate state change
+      stateChangeCallback({ submitFailed: true, modifiedSinceLastSubmit: true });
+
+      expect(controller.isFormSubmitFailed).toBe(true);
+      expect(controller.modifiedSinceLastSubmit).toBe(true);
+      expect(host.requestUpdate).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('registerDependants', () => {
+    it('should register dependants and update state on changes', () => {
+      controller.dependants = ['dependant1', 'dependant2'];
+      
+      controller.registerDependants();
+      
+      expect(formController.register).toHaveBeenCalledTimes(2);
+      expect(host.requestUpdate).toHaveBeenCalled(); // Ensure it requests update
+    });
+  });
+
+  describe('onValidate', () => {
+    it('should return an error message if the field is required and empty', () => {
+      controller.required = true;
+      const result = controller.onValidate('');
+
+      expect(result).toBe("This field is required");
+    });
+
+    it('should return undefined if the field is not required or has value', () => {
+      controller.required = true;
+      expect(controller.onValidate('value')).toBeUndefined();
+      
+      controller.required = false;
+      expect(controller.onValidate('')).toBeUndefined();
+    });
+  });
+
+  describe('change', () => {
+    it('should change fieldState value', () => {
+      controller.fieldState = { change: jest.fn() };
+      controller.change('newValue');
+
+      expect(controller.fieldState.change).toHaveBeenCalledWith('newValue');
+    });
+  });
+
+  describe('hostDisconnected', () => {
+    it('should call handleUnsubscribe on host disconnect', () => {
+      jest.spyOn(controller, 'handleUnsubscribe');
+      controller.hostDisconnected();
+
+      expect(controller.handleUnsubscribe).toHaveBeenCalled();
+    });
+  });
+
+  // Add additional tests for other methods as needed...
+});
