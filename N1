@@ -1,0 +1,158 @@
+import { BaseController } from './base-controller';
+
+describe('BaseController', () => {
+    let controller: BaseController;
+
+    beforeEach(() => {
+        controller = new BaseController();
+        controller.config = {
+            property: 'testProperty',
+            visible: true,
+            readOnly: 'readOnlyRule',
+            required: 'requiredRule',
+        };
+        controller.formController = {
+            executeRule: jest.fn().mockReturnValue(true),
+            register: jest.fn(),
+            getFormState: jest.fn().mockReturnValue({ values: { key: 'value' } }),
+        };
+        controller.host = {
+            requestUpdate: jest.fn(),
+        };
+    });
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    describe('readOnly', () => {
+        it('should return the result of executeRule for readOnly', () => {
+            controller.formController.executeRule = jest.fn().mockReturnValue(false);
+            expect(controller.readOnly).toBe(false);
+            expect(controller.formController.executeRule).toHaveBeenCalledWith(controller.config.readOnly);
+        });
+    });
+
+    describe('required', () => {
+        it('should return the result of executeRule for required', () => {
+            controller.formController.executeRule = jest.fn().mockReturnValue(true);
+            expect(controller.required).toBe(true);
+            expect(controller.formController.executeRule).toHaveBeenCalledWith(controller.config.required);
+        });
+    });
+
+    describe('initialize', () => {
+        it('should set config, formController, and meta properties', () => {
+            const options = {
+                config: { property: 'newProperty' },
+                formController: { someMethod: jest.fn() },
+                meta: { info: 'metaInfo' },
+            };
+            controller.initialize(options);
+            expect(controller.config).toEqual(options.config);
+            expect(controller.formController).toEqual(options.formController);
+            expect(controller.meta).toEqual(options.meta);
+        });
+    });
+
+    describe('registerDependants', () => {
+        it('should register dependants and update formValue on change', () => {
+            const dependants = ['dep1', 'dep2'];
+            jest.spyOn(controller, 'dependants', 'get').mockReturnValue(dependants);
+
+            controller.registerDependants();
+
+            expect(controller.unsubscribes.length).toBe(2);
+            dependants.forEach((dep, index) => {
+                expect(controller.formController.register).toHaveBeenCalledWith(
+                    dep,
+                    expect.any(Function),
+                    { value: true }
+                );
+                // Simulate the callback function for each dependant
+                controller.formController.register.mock.calls[index][1]();
+                expect(controller.host.requestUpdate).toHaveBeenCalled();
+                expect(controller.formValue).toEqual({ key: 'value' });
+            });
+        });
+    });
+
+    describe('handleUnsubscribe', () => {
+        it('should call each function in unsubscribes array', () => {
+            const mockFn1 = jest.fn();
+            const mockFn2 = jest.fn();
+            controller.unsubscribes = [mockFn1, mockFn2];
+
+            controller.handleUnsubscribe();
+
+            expect(mockFn1).toHaveBeenCalled();
+            expect(mockFn2).toHaveBeenCalled();
+        });
+    });
+});
+
+
+≈======
+
+import { BaseController } from './base-controller';
+
+describe('BaseController', () => {
+    let controller: BaseController;
+
+    beforeEach(() => {
+        controller = new BaseController();
+        controller.config = {
+            property: 'testProperty',
+            visible: true,
+        };
+        controller.formController = {
+            executeRule: jest.fn().mockReturnValue(true),
+        };
+    });
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('should initialize with default values', () => {
+        expect(controller.unsubscribes).toEqual([]);
+        expect(controller.formValue).toEqual({});
+        expect(controller.config).toEqual({
+            property: 'testProperty',
+            visible: true,
+        });
+        expect(controller.formController).toBeDefined();
+        expect(controller.meta).toEqual({});
+        expect(controller.conditionalProperties).toEqual(['visible']);
+    });
+
+    it('should return correct dependants', () => {
+        const mockDependants = ['dependant1', 'dependant2'];
+        jest.mock('./utils', () => ({
+            getDependants: jest.fn().mockReturnValue(mockDependants),
+        }));
+        
+        expect(controller.dependants).toEqual(mockDependants);
+    });
+
+    it('should return the correct id from config property', () => {
+        expect(controller.id).toBe('testProperty');
+    });
+
+    it('should return true for visible if config visible is undefined or true', () => {
+        // Case when visible is set to true
+        expect(controller.visible).toBe(true);
+
+        // Case when visible is undefined
+        controller.config.visible = undefined;
+        expect(controller.visible).toBe(true);
+    });
+
+    it('should execute rule if config visible is set and return its result', () => {
+        controller.config.visible = 'someRule';
+        controller.formController.executeRule = jest.fn().mockReturnValue(false);
+
+        expect(controller.visible).toBe(false);
+        expect(controller.formController.executeRule).toHaveBeenCalledWith('someRule');
+    });
+});
