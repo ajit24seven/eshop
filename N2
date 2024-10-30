@@ -1,0 +1,123 @@
+// controlController.test.ts
+import { ControlController } from './ControlController';
+import { ReactiveControllerHost } from 'lit';
+
+describe('ControlController', () => {
+    let host: ReactiveControllerHost;
+    let controller: ControlController;
+
+    beforeEach(() => {
+        // Mock a ReactiveControllerHost
+        host = {
+            addController: jest.fn(),
+            removeController: jest.fn(),
+            requestUpdate: jest.fn(),
+        };
+        controller = new ControlController(host);
+    });
+
+    describe('Initialization', () => {
+        test('should initialize with default values', () => {
+            expect(controller.isFormSubmitFailed).toBe(false);
+            expect(controller.modifiedSinceLastSubmit).toBe(false);
+            expect(controller.fieldState).toBeUndefined();
+            expect(controller.conditionalProperties).toEqual(["visible", "readOnly", "required"]);
+        });
+
+        test('should add itself to the host controller', () => {
+            expect(host.addController).toHaveBeenCalledWith(controller);
+        });
+    });
+
+    describe('value getter', () => {
+        test('should return undefined when fieldState is not set', () => {
+            expect(controller.value).toBeUndefined();
+        });
+
+        test('should return fieldState.value when fieldState is set', () => {
+            controller.fieldState = { value: 'testValue' };
+            expect(controller.value).toBe('testValue');
+        });
+    });
+
+    describe('errorMessage getter', () => {
+        test('should return null when there is no error or submit failed/modified flag is false', () => {
+            controller.fieldState = { error: 'Some error' };
+            expect(controller.errorMessage).toBe(null);
+        });
+
+        test('should return error when isFormSubmitFailed is true', () => {
+            controller.fieldState = { error: 'Some error' };
+            controller.isFormSubmitFailed = true;
+            expect(controller.errorMessage).toBe('Some error');
+        });
+
+        test('should return error when modifiedSinceLastSubmit is true', () => {
+            controller.fieldState = { error: 'Some error' };
+            controller.modifiedSinceLastSubmit = true;
+            expect(controller.errorMessage).toBe('Some error');
+        });
+    });
+
+    describe('customEvents getter', () => {
+        test('should return an empty array if config.events is not set', () => {
+            controller.config = {};
+            expect(controller.customEvents).toEqual([]);
+        });
+
+        test('should return config.events if it is set', () => {
+            controller.config = { events: ['event1', 'event2'] };
+            expect(controller.customEvents).toEqual(['event1', 'event2']);
+        });
+    });
+});
+
+====
+initialize(options: any): void {
+    super.initialize(options);
+    this.isFormSubmitFailed = this.formController.getFormState().submitFailed;
+    this.modifiedSinceLastSubmit = this.formController.getFormState().modifiedSinceLastSubmit;
+    
+    if (this.id) {
+        this.unsubscribes.push(
+            this.formController.register(
+                this.id,
+                (fieldState: any) => {
+                    this.fieldState = fieldState;
+                    this.formValue = this.formController.getFormState().values;
+                    this.host.requestUpdate();
+                },
+                {
+                    value: true,
+                    valid: true,
+                    dirty: true,
+                    error: true,
+                    getValidator: () => this.onValidate,
+                    validateFields: [],
+                }
+            )
+        );
+    }
+
+    this.formStateChangeListener();
+    this.registerDependants();
+}
+
+registerDependants = (): void => {
+    for (const x of this.dependants) {
+        this.unsubscribes.push(
+            this.formController.register(
+                x,
+                () => {
+                    this.formValue = this.formController.getFormState().values;
+                    if (!this.visible && isNotEmpty(this.value)) {
+                        this.fieldState.change(null);
+                    } else {
+                        this.host.requestUpdate();
+                    }
+                },
+                { value: true }
+            )
+        );
+    }
+};
