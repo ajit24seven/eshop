@@ -1,0 +1,188 @@
+import { ArrayController } from './path/to/ArrayController';
+import { ReactiveControllerHost } from 'lit';
+
+describe('ArrayController', () => {
+  let host;
+  let arrayController;
+
+  beforeEach(() => {
+    host = new ReactiveControllerHost();
+    arrayController = new ArrayController(host);
+  });
+
+  describe('constructor', () => {
+    it('should initialize fieldState and add controller to host', () => {
+      expect(arrayController.fieldState).toEqual({});
+      expect(host.controllers).toContain(arrayController);
+    });
+  });
+
+  describe('get value', () => {
+    it('should return the value from fieldState', () => {
+      arrayController.fieldState = { value: 'testValue' };
+      expect(arrayController.value).toBe('testValue');
+    });
+  });
+
+  describe('initialize', () => {
+    it('should initialize the controller with options and register fieldState', () => {
+      const mockFormController = {
+        register: jest.fn().mockReturnValue(() => {}),
+        getFormState: jest.fn().mockReturnValue({ values: [] })
+      };
+      arrayController.formController = mockFormController;
+      arrayController.id = 'testId';
+
+      arrayController.initialize({});
+
+      expect(mockFormController.register).toHaveBeenCalledWith(
+        'testId',
+        expect.any(Function),
+        { value: true }
+      );
+    });
+    
+    it('should update the host if fieldState changes', () => {
+      const requestUpdateSpy = jest.spyOn(host, 'requestUpdate');
+      const prevFieldState = { value: [1, 2] };
+      arrayController.fieldState = prevFieldState;
+
+      arrayController.initialize({});
+
+      const fieldStateCallback = mockFormController.register.mock.calls[0][1];
+      fieldStateCallback({ value: [1, 2, 3] });
+
+      expect(requestUpdateSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('registerDependants', () => {
+    it('should call registerDependants function', () => {
+      const registerDependantsSpy = jest.spyOn(arrayController, 'registerDependants');
+      arrayController.registerDependants();
+
+      expect(registerDependantsSpy).toHaveBeenCalled();
+    });
+  });
+
+import { ArrayController } from './path/to/ArrayController';
+import { ReactiveControllerHost } from 'lit';
+
+describe('ArrayController Additional Methods', () => {
+  let host;
+  let arrayController;
+  let mockFormController;
+
+  beforeEach(() => {
+    host = new ReactiveControllerHost();
+    mockFormController = {
+      insert: jest.fn(),
+      push: jest.fn(),
+      pop: jest.fn(),
+      remove: jest.fn(),
+      removeBatch: jest.fn(),
+      unshift: jest.fn(),
+      updateRecord: jest.fn()
+    };
+    arrayController = new ArrayController(host);
+    arrayController.formController = mockFormController;
+  });
+
+  describe('insert', () => {
+    it('should call formController.insert with correct parameters', () => {
+      arrayController.insert(0, 'value');
+      expect(mockFormController.insert).toHaveBeenCalledWith(0, 'value');
+    });
+  });
+
+  describe('push', () => {
+    it('should call formController.push with correct parameter', () => {
+      arrayController.push('value');
+      expect(mockFormController.push).toHaveBeenCalledWith('value');
+    });
+  });
+
+  describe('pop', () => {
+    it('should call formController.pop', () => {
+      arrayController.pop();
+      expect(mockFormController.pop).toHaveBeenCalled();
+    });
+  });
+
+  describe('remove', () => {
+    it('should call formController.remove with correct parameter', () => {
+      arrayController.remove(0);
+      expect(mockFormController.remove).toHaveBeenCalledWith(0);
+    });
+  });
+
+  describe('removeBatch', () => {
+    it('should call formController.removeBatch with correct parameter', () => {
+      arrayController.removeBatch([0, 1]);
+      expect(mockFormController.removeBatch).toHaveBeenCalledWith([0, 1]);
+    });
+  });
+
+  describe('unshift', () => {
+    it('should call formController.unshift with correct parameter', () => {
+      arrayController.unshift('value');
+      expect(mockFormController.unshift).toHaveBeenCalledWith('value');
+    });
+  });
+
+  describe('updateRecord', () => {
+    it('should call formController.updateRecord with correct parameter', () => {
+      arrayController.updateRecord('value');
+      expect(mockFormController.updateRecord).toHaveBeenCalledWith('value');
+    });
+  });
+
+  describe('move', () => {
+    it('should call formController.updateRecord with correct parameters for move', () => {
+      arrayController.move(0, 1);
+      expect(mockFormController.updateRecord).toHaveBeenCalledWith(0, 1);
+    });
+  });
+
+  describe('shift', () => {
+    it('should call formController.updateRecord for shift', () => {
+      arrayController.shift();
+      expect(mockFormController.updateRecord).toHaveBeenCalled();
+    });
+  });
+
+  describe('swap', () => {
+    it('should call formController.updateRecord with correct parameters for swap', () => {
+      arrayController.swap(0, 1);
+      expect(mockFormController.updateRecord).toHaveBeenCalledWith(0, 1);
+    });
+  });
+
+  describe('concat', () => {
+    it('should call formController.updateRecord with correct parameter for concat', () => {
+      arrayController.concat(['value1', 'value2']);
+      expect(mockFormController.updateRecord).toHaveBeenCalledWith(['value1', 'value2']);
+    });
+  });
+
+  describe('change', () => {
+    it('should call fieldState.change and host.requestUpdate when fieldState exists', () => {
+      arrayController.fieldState = { change: jest.fn() };
+      const requestUpdateSpy = jest.spyOn(host, 'requestUpdate');
+      
+      arrayController.change('newValue');
+
+      expect(arrayController.fieldState.change).toHaveBeenCalledWith('newValue');
+      expect(requestUpdateSpy).toHaveBeenCalled();
+    });
+
+    it('should only call host.requestUpdate when fieldState does not exist', () => {
+      const requestUpdateSpy = jest.spyOn(host, 'requestUpdate');
+      
+      arrayController.change('newValue');
+
+      expect(requestUpdateSpy).toHaveBeenCalled();
+    });
+  });
+});
+});
