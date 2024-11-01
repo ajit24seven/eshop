@@ -1,0 +1,79 @@
+import { fixture, html, expect } from '@open-wc/testing';
+import './path-to-your-component.js'; // Update this with the actual path to the component
+import { nothing } from 'lit';
+import { TemplateResult } from 'lit';
+
+// Import the component type for better type checking
+import { FormRenderer } from './path-to-your-component'; // Adjust path and class name if needed
+
+describe('<cmt-form-renderer>', () => {
+  let element: FormRenderer;
+
+  // Set up before each test
+  beforeEach(async () => {
+    element = await fixture(html`<cmt-form-renderer></cmt-form-renderer>`);
+  });
+
+  it('should have default properties', () => {
+    // Check default values
+    expect(element.config).to.be.undefined;
+    expect(element.formController).to.be.undefined;
+    expect(element.meta).to.be.undefined;
+    expect(element.componentMap).to.be.undefined;
+    expect(element.template).to.deep.equal([]);
+  });
+
+  it('should update properties when set', async () => {
+    // Set properties
+    element.config = { someConfig: true };
+    element.formController = { controller: true };
+    element.meta = { someMeta: true };
+    element.componentMap = { someMap: true };
+    element.template = [{ type: 'test' }];
+
+    // Wait for the component to update
+    await element.updateComplete;
+
+    // Assert that properties were updated correctly
+    expect(element.config).to.deep.equal({ someConfig: true });
+    expect(element.formController).to.deep.equal({ controller: true });
+    expect(element.meta).to.deep.equal({ someMeta: true });
+    expect(element.componentMap).to.deep.equal({ someMap: true });
+    expect(element.template).to.deep.equal([{ type: 'test' }]);
+  });
+
+  it('should render <cmt-control-wrapper> for CONTROL component type in renderComponentWrapper', async () => {
+    // Set the template to have a CONTROL component type
+    element.template = [
+      { type: 'CONTROL', config: { fieldConfig: 'testConfig' } }
+    ];
+
+    // Wait for the component to update
+    await element.updateComplete;
+
+    // Call renderComponentWrapper directly
+    const renderedWrapper: TemplateResult = element.renderComponentWrapper();
+
+    // Render the component in the DOM for assertion
+    const wrapper = await fixture(renderedWrapper);
+
+    // Assert that <cmt-control-wrapper> is rendered with the correct content
+    expect(wrapper.querySelector('cmt-control-wrapper')).to.exist;
+  });
+
+  it('should render nothing if the component type is not CONTROL in renderComponentWrapper', async () => {
+    // Set the template to have a non-CONTROL component type
+    element.template = [
+      { type: 'OTHER_TYPE', config: { fieldConfig: 'otherConfig' } }
+    ];
+
+    // Wait for the component to update
+    await element.updateComplete;
+
+    // Call renderComponentWrapper directly
+    const renderedWrapper: TemplateResult | typeof nothing = element.renderComponentWrapper();
+
+    // Assert that nothing is rendered for non-CONTROL types
+    expect(renderedWrapper).to.equal(nothing);
+  });
+});
