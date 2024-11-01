@@ -249,3 +249,70 @@ describe('FormController', () => {
     // Your test logic here...
   });
 });
+
+
+=====
+
+import { FormController } from './FormController';
+
+describe('FormController', () => {
+    let formController: FormController;
+    const mockRuleExecutor = jest.fn();
+
+    beforeEach(() => {
+        formController = new FormController({});
+    });
+
+    describe('initialize', () => {
+        test('should initialize with default values', () => {
+            const options = {
+                defaultValues: { field1: 'value1', field2: 'value2' },
+                values: { field1: 'value1', field2: 'value2' },
+                meta: {},
+                ruleExecutor: mockRuleExecutor,
+                onSubmit: jest.fn()
+            };
+            
+            formController.initialize(options);
+            
+            // Access private properties using `as any`
+            expect((formController as any)['defaultValues']).toEqual(options.defaultValues);
+            expect((formController as any)['values']).toEqual(options.values);
+            expect((formController as any)['meta']).toEqual(options.meta);
+            expect((formController as any)['ruleExecutor']).toBe(options.ruleExecutor);
+        });
+    });
+
+    describe('executeRule', () => {
+        test('should execute rule when ruleExecutor is defined', () => {
+            const ruleConfig = { someConfig: true };
+            const mockGetFormValue = jest.spyOn(formController, 'getFormValue').mockReturnValue('mockValue');
+
+            mockRuleExecutor.mockReturnValue(true);
+            (formController as any)['ruleExecutor'] = mockRuleExecutor;
+
+            const result = formController.executeRule(ruleConfig);
+
+            expect(mockRuleExecutor).toHaveBeenCalledWith(ruleConfig, 'mockValue', (formController as any)['meta']);
+            expect(result).toBe(true);
+            mockGetFormValue.mockRestore();
+        });
+
+        test('should not execute rule if ruleExecutor is not a function', () => {
+            (formController as any)['ruleExecutor'] = null;
+            const result = formController.executeRule({});
+
+            expect(result).toBe(false);
+        });
+
+        test('should return false if executeRule fails due to invalid configuration', () => {
+            const ruleConfig = { someConfig: true };
+            (formController as any)['ruleExecutor'] = mockRuleExecutor;
+
+            const result = formController.executeRule(ruleConfig);
+
+            expect(result).toBe(false);
+            expect(mockRuleExecutor).not.toHaveBeenCalled();
+        });
+    });
+});
