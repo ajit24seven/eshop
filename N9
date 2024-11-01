@@ -1,3 +1,74 @@
+
+import { FormController } from './path/to/FormController';
+
+describe('FormController', () => {
+  let formController;
+  let mockHost;
+
+  beforeEach(() => {
+    mockHost = { addController: jest.fn() };
+    formController = new FormController(mockHost);
+  });
+
+  describe('constructor', () => {
+    it('should initialize with host and call addController', () => {
+      expect(formController.host).toBe(mockHost);
+      expect(mockHost.addController).toHaveBeenCalledWith(formController);
+    });
+  });
+
+  describe('initialize', () => {
+    it('should initialize form with given options', () => {
+      const mockOptions = {
+        defaultValues: { field: 'value' },
+        values: { field: 'value' },
+        meta: { info: 'meta' },
+        ruleExecutor: jest.fn(),
+        onSubmit: jest.fn(),
+      };
+
+      formController.initialize(mockOptions);
+
+      expect(formController.defaultValues).toEqual(mockOptions.defaultValues);
+      expect(formController.values).toEqual(mockOptions.values);
+      expect(formController.meta).toEqual(mockOptions.meta);
+      expect(formController.ruleExecutor).toBe(mockOptions.ruleExecutor);
+      expect(formController.onSubmit).toBe(mockOptions.onSubmit);
+      // You can also add tests for formApi and its properties
+    });
+  });
+
+  describe('hostDisconnected', () => {
+    it('should handle host disconnection', () => {
+      // This method currently has no functionality, but you could test if it gets called properly
+      formController.hostDisconnected();
+      // No assertions needed if it has no implementation
+    });
+  });
+
+  describe('register', () => {
+    it('should register a field with formApi', () => {
+      formController.formApi = {
+        registerField: jest.fn(),
+      };
+      const name = 'fieldName';
+      const subscriber = jest.fn();
+      const subscription = {};
+      const config = {};
+
+      formController.register(name, subscriber, subscription, config);
+
+      expect(formController.formApi.registerField).toHaveBeenCalledWith(name, subscriber, subscription, config);
+    });
+  });
+
+  describe('getMeta', () => {
+    it('should return meta data', () => {
+      formController.meta = { info: 'meta data' };
+      expect(formController.getMeta()).toEqual({ info: 'meta data' });
+    });
+  });
+});
 import { FormController } from './path/to/FormController';
 
 describe('FormController', () => {
