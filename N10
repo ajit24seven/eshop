@@ -1,0 +1,49 @@
+import { expect, fixture, html } from '@open-wc/testing';
+import './path/to/form-builder.js'; // Update the import path to your component
+
+describe('FormBuilder', () => {
+  let element;
+
+  beforeEach(async () => {
+    // Initialize the component
+    element = await fixture(html`<clmt-form-builder></clmt-form-builder>`);
+  });
+
+  it('should render the component', () => {
+    expect(element).to.exist;
+  });
+
+  it('should have default values for properties', () => {
+    expect(element.data).to.be.null;
+    expect(element.meta).to.be.null;
+    expect(element.noData).to.be.false;
+  });
+
+  it('should emit "form-ready" event on connected callback', (done) => {
+    // Listen for the "form-ready" event
+    element.addEventListener('form-ready', (event) => {
+      expect(event.detail).to.equal(element.formController);
+      done();
+    });
+    // Manually call connectedCallback to trigger the event for testing
+    element.connectedCallback();
+  });
+
+  it('should initialize formController with expected values', () => {
+    element.connectedCallback();
+    const controller = element.formController;
+    expect(controller.defaultValues).to.equal(element.defaultValues);
+    expect(controller.values).to.equal(element.data);
+    expect(controller.meta).to.equal(element.meta);
+    expect(controller.ruleExecutor).to.equal(element.ruleExecutor);
+    expect(controller.onSubmit).to.equal(element.onSubmit);
+  });
+
+  it('should render template in the shadow DOM', () => {
+    const renderer = element.shadowRoot.querySelector('clmt-form-renderer');
+    expect(renderer).to.exist;
+    expect(renderer.template).to.equal(element.template);
+    expect(renderer.componentMap).to.equal(element.componentMap);
+    expect(renderer.formController).to.equal(element.formController);
+  });
+});
