@@ -1,0 +1,139 @@
+import { FormController } from './path/to/FormController';
+
+describe('FormController', () => {
+  let formController;
+  let mockHost;
+  let mockFormApi;
+
+  beforeEach(() => {
+    mockHost = { addController: jest.fn() };
+    mockFormApi = {
+      getState: jest.fn().mockReturnValue({ values: { field: 'value' } }),
+      submit: jest.fn(),
+      subscribe: jest.fn(),
+    };
+    formController = new FormController(mockHost);
+    formController.formApi = mockFormApi; // Mock formApi for tests
+  });
+
+  describe('constructor', () => {
+    it('should initialize with host and call addController', () => {
+      expect(formController.host).toBe(mockHost);
+      expect(mockHost.addController).toHaveBeenCalledWith(formController);
+    });
+  });
+
+  describe('initialize', () => {
+    it('should initialize form with given options', () => {
+      const mockOptions = {
+        defaultValues: { field: 'value' },
+        values: { field: 'value' },
+        meta: { info: 'meta' },
+        ruleExecutor: jest.fn(),
+        onSubmit: jest.fn(),
+      };
+
+      formController.initialize(mockOptions);
+
+      expect(formController.defaultValues).toEqual(mockOptions.defaultValues);
+      expect(formController.values).toEqual(mockOptions.values);
+      expect(formController.meta).toEqual(mockOptions.meta);
+      expect(formController.ruleExecutor).toBe(mockOptions.ruleExecutor);
+      expect(formController.onSubmit).toBe(mockOptions.onSubmit);
+    });
+  });
+
+  describe('hostDisconnected', () => {
+    it('should handle host disconnection', () => {
+      formController.hostDisconnected();
+    });
+  });
+
+  describe('register', () => {
+    it('should register a field with formApi', () => {
+      formController.formApi = {
+        registerField: jest.fn(),
+      };
+      const name = 'fieldName';
+      const subscriber = jest.fn();
+      const subscription = {};
+      const config = {};
+
+      formController.register(name, subscriber, subscription, config);
+
+      expect(formController.formApi.registerField).toHaveBeenCalledWith(name, subscriber, subscription, config);
+    });
+  });
+
+  describe('getMeta', () => {
+    it('should return meta data', () => {
+      formController.meta = { info: 'meta data' };
+      expect(formController.getMeta()).toEqual({ info: 'meta data' });
+    });
+  });
+
+  describe('getFormValue', () => {
+    it('should return form values from form state', () => {
+      const values = formController.getFormValue();
+      expect(mockFormApi.getState).toHaveBeenCalled();
+      expect(values).toEqual({ field: 'value' });
+    });
+  });
+
+  describe('getFormState', () => {
+    it('should return the form state from formApi', () => {
+      const state = formController.getFormState();
+      expect(mockFormApi.getState).toHaveBeenCalled();
+      expect(state).toEqual({ values: { field: 'value' } });
+    });
+  });
+
+  describe('executeRule', () => {
+    it('should return false if ruleExecutor is not a function or ruleConfig is empty', () => {
+      formController.ruleExecutor = null;
+      expect(formController.executeRule({})).toBe(false);
+
+      formController.ruleExecutor = jest.fn();
+      expect(formController.executeRule(null)).toBe(false);
+    });
+
+    it('should call ruleExecutor with ruleConfig and form values', () => {
+      const ruleConfig = { someRule: true };
+      formController.ruleExecutor = jest.fn();
+
+      formController.executeRule(ruleConfig);
+
+      expect(formController.ruleExecutor).toHaveBeenCalledWith(ruleConfig, {
+        values: { field: 'value' },
+        meta: formController.meta,
+      });
+    });
+  });
+
+  describe('submit', () => {
+    it('should call formApi.submit', () => {
+      formController.submit();
+      expect(mockFormApi.submit).toHaveBeenCalled();
+    });
+  });
+
+  describe('_onSubmit', () => {
+    it('should log the arguments passed', () => {
+      console.log = jest.fn();
+      formController._onSubmit(1, 2, 3);
+
+      expect(console.log).toHaveBeenCalledWith(1, 2, 3);
+    });
+  });
+
+  describe('subscribe', () => {
+    it('should call formApi.subscribe with the given subscriber and subscription', () => {
+      const subscriber = jest.fn();
+      const subscription = { name: true };
+
+      formController.subscribe(subscriber, subscription);
+
+      expect(mockFormApi.subscribe).toHaveBeenCalledWith(subscriber, subscription);
+    });
+  });
+});
