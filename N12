@@ -1,0 +1,100 @@
+// form-builder.test.ts
+import { expect, fixture, html } from '@open-wc/testing';
+import './path/to/form-builder.ts'; // Adjust path to your FormBuilder component file
+import { FormBuilder } from './path/to/form-builder'; // Adjust path to your FormBuilder component file
+
+describe('FormBuilder Component', () => {
+  it('should initialize with default property values', async () => {
+    const element = await fixture<FormBuilder>(html`
+      <clmt-form-builder></clmt-form-builder>
+    `);
+
+    // Verify default values
+    expect(element.template).to.deep.equal([]);
+    expect(element.data).to.deep.equal({});
+    expect(element.meta).to.deep.equal({});
+    expect(element.componentMap).to.deep.equal({});
+    expect(element.noData).to.deep.equal({});
+    expect(element.defaultValues).to.deep.equal({});
+    expect(element.onSubmit).to.equal(null);
+    expect(element.ruleExecutor).to.be.undefined;
+  });
+
+  it('should accept and override template property', async () => {
+    const mockTemplate = [{ id: 'sample-template' }];
+    const element = await fixture<FormBuilder>(html`
+      <clmt-form-builder .template="${mockTemplate}"></clmt-form-builder>
+    `);
+
+    // Check if the `template` property is set correctly
+    expect(element.template).to.deep.equal(mockTemplate);
+  });
+
+  it('should accept and override data property', async () => {
+    const mockData = { field1: 'value1' };
+    const element = await fixture<FormBuilder>(html`
+      <clmt-form-builder .data="${mockData}"></clmt-form-builder>
+    `);
+
+    // Check if the `data` property is set correctly
+    expect(element.data).to.deep.equal(mockData);
+  });
+
+  it('should accept and override meta property', async () => {
+    const mockMeta = { type: 'metadata' };
+    const element = await fixture<FormBuilder>(html`
+      <clmt-form-builder .meta="${mockMeta}"></clmt-form-builder>
+    `);
+
+    // Check if the `meta` property is set correctly
+    expect(element.meta).to.deep.equal(mockMeta);
+  });
+
+  it('should accept and override componentMap property', async () => {
+    const mockComponentMap = { componentA: 'A' };
+    const element = await fixture<FormBuilder>(html`
+      <clmt-form-builder .componentMap="${mockComponentMap}"></clmt-form-builder>
+    `);
+
+    // Check if the `componentMap` property is set correctly
+    expect(element.componentMap).to.deep.equal(mockComponentMap);
+  });
+
+  it('should accept and override noData property', async () => {
+    const mockNoData = { message: 'No data available' };
+    const element = await fixture<FormBuilder>(html`
+      <clmt-form-builder .noData="${mockNoData}"></clmt-form-builder>
+    `);
+
+    // Check if the `noData` property is set correctly
+    expect(element.noData).to.deep.equal(mockNoData);
+  });
+
+  it('should accept and override defaultValues property', async () => {
+    const mockDefaultValues = { key: 'defaultValue' };
+    const element = await fixture<FormBuilder>(html`
+      <clmt-form-builder .defaultValues="${mockDefaultValues}"></clmt-form-builder>
+    `);
+
+    // Check if the `defaultValues` property is set correctly
+    expect(element.defaultValues).to.deep.equal(mockDefaultValues);
+  });
+
+  it('should initialize FormController and emit "form-ready" event on connectedCallback', async () => {
+    const element = await fixture<FormBuilder>(html`
+      <clmt-form-builder></clmt-form-builder>
+    `);
+
+    // Spy on the `form-ready` event
+    const eventSpy = sinon.spy();
+    element.addEventListener('form-ready', eventSpy);
+
+    // Manually call connectedCallback if not done automatically in test environment
+    element.connectedCallback();
+
+    // Check if the formController is initialized and "form-ready" is emitted
+    expect(element.formController).to.exist;
+    expect(eventSpy.calledOnce).to.be.true;
+    expect(eventSpy.firstCall.args[0].detail).to.equal(element.formController);
+  });
+});
