@@ -1,4 +1,4 @@
-
+4
 import { FormController } from './path/to/FormController';
 
 describe('FormController', () => {
@@ -206,5 +206,46 @@ describe('FormController', () => {
 
       expect(mockFormApi.subscribe).toHaveBeenCalledWith(subscriber, subscription);
     });
+  });
+});
+
+
+====
+
+import { FormController } from '../form-controller';
+import { jest } from '@jest/globals';
+import { ReactiveControllerHost } from 'lit';
+
+describe('FormController', () => {
+  let host: ReactiveControllerHost;
+  let formController: FormController;
+  let mockFormApi: jest.Mocked<{
+    getState: () => { values: { field: string } };
+    submit: () => void;
+    subscribe: () => void;
+  }>;
+
+  beforeEach(() => {
+    host = {
+      addController: jest.fn(),
+      removeController: jest.fn(),
+      requestUpdate: jest.fn(),
+    } as unknown as ReactiveControllerHost;
+
+    mockFormApi = {
+      getState: jest.fn().mockReturnValue({ values: { field: 'value' } }),
+      submit: jest.fn(),
+      subscribe: jest.fn(),
+    };
+
+    formController = new FormController(host);
+    (formController as any).formApi = mockFormApi; // Bypassing TypeScript's private access control
+  });
+
+  test('should test formController behavior', () => {
+    // Example test using the private `defaultValues`
+    const defaultValues = (formController as any).defaultValues;
+    expect(defaultValues).toBeDefined();
+    // Your test logic here...
   });
 });
