@@ -86,3 +86,120 @@ describe('FormRenderer', () => {
     expect(renderSpy.called).to.be.true;
   });
 });
+
+
+====
+import { fixture, html, expect } from '@open-wc/testing';
+import { FormRenderer } from '../src/form-renderer.js'; // Update the path as necessary
+import { LitElement } from 'lit';
+import sinon from 'sinon';
+
+describe('FormRenderer', () => {
+  let element: FormRenderer;
+
+  beforeEach(async () => {
+    element = await fixture<FormRenderer>(html`<clmt-form-renderer></clmt-form-renderer>`);
+  });
+
+  it('is an instance of LitElement', () => {
+    expect(element).to.be.instanceOf(LitElement);
+  });
+
+  it('has default properties defined', () => {
+    expect(element.config).to.be.undefined;
+    expect(element.formController).to.be.undefined;
+    expect(element.meta).to.be.undefined;
+    expect(element.componentMap).to.be.undefined;
+    expect(element.template).to.be.undefined;
+  });
+
+  it('adds "sc-grid-row" class to the element', () => {
+    expect(element.classList.contains('sc-grid-row')).to.be.true;
+  });
+
+  it('renders a control wrapper when component type is CONTROL with properties set', async () => {
+    // Set up properties
+    const fieldConfig = { type: 'CONTROL' };
+    const componentMap = { exampleComponent: 'sample' };
+    const meta = { author: 'Test' };
+    const formController = { controlId: 1 };
+
+    element.componentMap = componentMap;
+    element.meta = meta;
+    element.formController = formController;
+
+    // Mock the template array with a control-type component
+    element.template = [fieldConfig];
+    await element.updateComplete;
+
+    // Verify that the control wrapper is rendered
+    const wrapper = element.shadowRoot?.querySelector('clmt-control-wrapper');
+    expect(wrapper).to.exist;
+
+    // Verify attributes are passed correctly
+    expect(wrapper?.getAttribute('config')).to.equal(String(fieldConfig));
+    expect(wrapper?.getAttribute('componentMap')).to.equal(String(componentMap));
+    expect(wrapper?.getAttribute('meta')).to.equal(String(meta));
+    expect(wrapper?.getAttribute('formController')).to.equal(String(formController));
+  });
+
+  it('does not render a control wrapper when component type is CONTROL without properties set', async () => {
+    const fieldConfig = { type: 'CONTROL' };
+
+    // Leave componentMap, meta, and formController undefined (default)
+    element.template = [fieldConfig];
+    await element.updateComplete;
+
+    const wrapper = element.shadowRoot?.querySelector('clmt-control-wrapper');
+    expect(wrapper).to.exist;
+
+    // Check that attributes are not set or are undefined
+    expect(wrapper?.getAttribute('config')).to.equal(String(fieldConfig));
+    expect(wrapper?.getAttribute('componentMap')).to.be.null;
+    expect(wrapper?.getAttribute('meta')).to.be.null;
+    expect(wrapper?.getAttribute('formController')).to.be.null;
+  });
+
+  it('returns nothing if component type is not CONTROL', async () => {
+    const fieldConfig = { type: 'OTHER_TYPE' };
+
+    element.template = [fieldConfig];
+    await element.updateComplete;
+
+    const wrapper = element.shadowRoot?.querySelector('clmt-control-wrapper');
+    expect(wrapper).to.not.exist;
+  });
+
+  it('calls renderComponentWrapper() in render()', async () => {
+    const renderSpy = sinon.spy(element, 'renderComponentWrapper');
+    element.requestUpdate();
+    await element.updateComplete;
+    expect(renderSpy.called).to.be.true;
+  });
+
+  it('dynamically updates and renders control wrapper when properties are set after instantiation', async () => {
+    // Initial check: no properties and no template
+    expect(element.config).to.be.undefined;
+    expect(element.template).to.be.undefined;
+
+    // Dynamically set properties
+    const fieldConfig = { type: 'CONTROL' };
+    const componentMap = { dynamicComponent: 'dynamicSample' };
+    const meta = { author: 'Dynamic Test' };
+    const formController = { controlId: 2 };
+
+    element.componentMap = componentMap;
+    element.meta = meta;
+    element.formController = formController;
+    element.template = [fieldConfig]; // Set template with CONTROL type
+    await element.updateComplete;
+
+    // Verify the control wrapper is rendered with new properties
+    const wrapper = element.shadowRoot?.querySelector('clmt-control-wrapper');
+    expect(wrapper).to.exist;
+    expect(wrapper?.getAttribute('config')).to.equal(String(fieldConfig));
+    expect(wrapper?.getAttribute('componentMap')).to.equal(String(componentMap));
+    expect(wrapper?.getAttribute('meta')).to.equal(String(meta));
+    expect(wrapper?.getAttribute('formController')).to.equal(String(formController));
+  });
+});
