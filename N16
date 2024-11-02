@@ -1,0 +1,60 @@
+import { fixture, expect, html } from '@open-wc/testing';
+import sinon from 'sinon';
+import './path-to/FormRenderer.js';
+import * as Utils from './path-to/utils.js'; // Import the utils to mock
+
+describe('FormRenderer Component', () => {
+  let element;
+
+  beforeEach(async () => {
+    // Stub the extractComponentType method in utils
+    sinon.stub(Utils, 'extractComponentType').returns('CONTROL'); // Mocked return value
+
+    // Create a fixture for the FormRenderer component
+    element = await fixture(html`<clmt-form-renderer></clmt-form-renderer>`);
+  });
+
+  afterEach(() => {
+    // Restore the original method
+    sinon.restore();
+  });
+
+  it('should be an instance of FormRenderer', () => {
+    expect(element).to.be.an.instanceof(FormRenderer);
+  });
+
+  it('should have the correct default properties', () => {
+    expect(element.config).to.be.undefined;
+    expect(element.formController).to.be.undefined;
+    expect(element.meta).to.be.undefined;
+    expect(element.componentMap).to.be.undefined;
+    expect(element.template).to.be.an('array').that.is.empty;
+  });
+
+  it('should add the correct class on creation', () => {
+    expect(element.classList.contains('sc-grid-row')).to.be.true;
+  });
+
+  it('should render a clmt-control-wrapper when component type is CONTROL', async () => {
+    element.template = [{ type: 'CONTROL' }];
+    await element.updateComplete;
+
+    const controlWrapper = element.shadowRoot.querySelector('clmt-control-wrapper');
+    expect(controlWrapper).to.exist;
+  });
+
+  it('should pass the correct properties to clmt-control-wrapper', async () => {
+    element.template = [{ type: 'CONTROL' }];
+    element.componentMap = { someKey: 'someValue' };
+    element.meta = { someMeta: 'metaValue' };
+    element.formController = { someController: 'controllerValue' };
+
+    await element.updateComplete;
+
+    const controlWrapper = element.shadowRoot.querySelector('clmt-control-wrapper');
+    expect(controlWrapper.config).to.deep.equal(element.template[0]);
+    expect(controlWrapper.componentMap).to.deep.equal(element.componentMap);
+    expect(controlWrapper.meta).to.deep.equal(element.meta);
+    expect(controlWrapper.formController).to.deep.equal(element.formController);
+  });
+});
