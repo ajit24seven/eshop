@@ -1,0 +1,55 @@
+import { fixture, html, expect } from '@open-wc/testing';
+import { FormRenderer } from './path-to-form-renderer-file.js';
+
+describe('FormRenderer Component', () => {
+  let element;
+
+  beforeEach(async () => {
+    element = await fixture(html`<form-renderer></form-renderer>`);
+  });
+
+  it('should render the control wrapper when component type is CONTROL', async () => {
+    const mockFieldConfig = { type: 'CONTROL' };
+    element.config = mockFieldConfig;
+    element.requestUpdate(); // Trigger a re-render if necessary
+    await element.updateComplete;
+
+    const controlWrapper = element.shadowRoot.querySelector('clmt-control-wrapper');
+    expect(controlWrapper).to.exist;
+  });
+
+  it('should render the section wrapper when component type is SECTION', async () => {
+    const mockFieldConfig = { type: 'SECTION' };
+    element.config = mockFieldConfig;
+    element.requestUpdate(); // Trigger a re-render if necessary
+    await element.updateComplete;
+
+    const sectionWrapper = element.shadowRoot.querySelector('clmt-section-wrapper');
+    expect(sectionWrapper).to.exist;
+  });
+
+  it('should render the array wrapper when component type is ARRAY', async () => {
+    const mockFieldConfig = { type: 'ARRAY' };
+    element.config = mockFieldConfig;
+    element.requestUpdate(); // Trigger a re-render if necessary
+    await element.updateComplete;
+
+    const arrayWrapper = element.shadowRoot.querySelector('clmt-array-wrapper');
+    expect(arrayWrapper).to.exist;
+  });
+
+  it('should not render any wrapper for an unknown component type', async () => {
+    const mockFieldConfig = { type: 'UNKNOWN_TYPE' };
+    element.config = mockFieldConfig;
+    element.requestUpdate(); // Trigger a re-render if necessary
+    await element.updateComplete;
+
+    const controlWrapper = element.shadowRoot.querySelector('clmt-control-wrapper');
+    const sectionWrapper = element.shadowRoot.querySelector('clmt-section-wrapper');
+    const arrayWrapper = element.shadowRoot.querySelector('clmt-array-wrapper');
+    
+    expect(controlWrapper).to.be.null;
+    expect(sectionWrapper).to.be.null;
+    expect(arrayWrapper).to.be.null;
+  });
+});
