@@ -1,0 +1,60 @@
+import { fixture, html, expect } from '@open-wc/testing';
+import './ControlWrapper'; // Adjust this path based on your project structure
+import { ControlWrapper } from './ControlWrapper';
+
+describe('ControlWrapper', () => {
+  let element: ControlWrapper;
+
+  beforeEach(async () => {
+    element = await fixture(html`<clmt-control-wrapper></clmt-control-wrapper>`);
+  });
+
+  it('should be accessible', async () => {
+    await expect(element).to.be.accessible();
+  });
+
+  it('should initialize controlController', () => {
+    expect(element.controlController).to.exist;
+    expect(element.controlController).to.be.an('object');
+  });
+
+  it('should render control correctly with config properties', () => {
+    element.config = { label: 'Test Label', colSpan: 6 };
+    element.formController = {}; // Provide a mock object if necessary
+    element.meta = {}; // Provide a mock object if necessary
+    element.requestUpdate();
+    
+    const gridColumnClass = `col-lg-${element.config.colSpan ?? 12}`;
+    expect(element.shadowRoot?.querySelector('.clmt-control-wrapper')).to.exist;
+    expect(element.classList.contains(gridColumnClass)).to.be.true;
+  });
+
+  it('should update dynamicHtml properties correctly', () => {
+    element.config = { label: 'Sample Label', type: 'text' };
+    element.controlController = {
+      value: 'sample value',
+      required: true,
+      errorMessage: 'Required field',
+      readOnly: false,
+      additionalProperties: {},
+    };
+    element.requestUpdate();
+
+    const control = element.shadowRoot?.querySelector('.clmt-control-wrapper');
+    expect(control).to.exist;
+    expect(control?.getAttribute('label')).to.equal('Sample Label');
+    expect(control?.getAttribute('value')).to.equal('sample value');
+    expect(control?.getAttribute('required')).to.equal('true');
+  });
+
+  it('should remove grid column class when control is not visible', () => {
+    element.config = { colSpan: 6 };
+    element.controlController = { visible: false };
+    element.requestUpdate();
+    
+    const gridColumnClass = `col-lg-${element.config.colSpan ?? 12}`;
+    expect(element.classList.contains(gridColumnClass)).to.be.false;
+  });
+
+  // Add more tests as needed based on other functionalities
+});
