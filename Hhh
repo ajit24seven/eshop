@@ -1,0 +1,34 @@
+<clmt-form-builder
+  @submit="${(data:any) => console.log(data)}"
+  .ruleExecutor="${executeRuleConfig}"
+  .template="${template}"
+  .validations="${{
+    min: {
+      value: 12,
+      message: 'some error message'
+    },
+    max: {
+      value: 12,
+      message: 'some error message'
+    },
+    minLength: {
+      value: 12,
+      message: 'some error message'
+    },
+    maxLength: {
+      value: 17,
+      message: 'some error message'
+    },
+    pattern: {
+      value: '([A-Z])\\w+',
+      message: 'some error message'
+    },
+    // Check if validation is a function; if function, use the object in the format below
+    validation: (value, formValues) => value === '1' || 'validation message',
+    // Alternatively
+    validation: {
+      customValidation1: (value, formValues) => value === '1' || 'validation message',
+      customValidation2: (value, formValues) => (formValues.length === 20 && value === 'test') || 'validation message'
+    }
+  }}">
+</clmt-form-builder>
