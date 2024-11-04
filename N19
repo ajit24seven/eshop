@@ -1,0 +1,88 @@
+import { 
+    extractComponentType, 
+    extractSubComponentType, 
+    getComponentTag, 
+    isRuleConditional, 
+    getDependants, 
+    extractAllFactsFromRule, 
+    ruleChecker 
+} from './path_to_your_file'; // Replace with actual file path
+
+describe('extractComponentType', () => {
+    it('should extract the component type from a type string', () => {
+        const result = extractComponentType('component-subtype');
+        expect(result).toBe('component');
+    });
+});
+
+describe('extractSubComponentType', () => {
+    it('should extract the sub-component type from a type string', () => {
+        const result = extractSubComponentType('component-subtype');
+        expect(result).toBe('subtype');
+    });
+});
+
+describe('getComponentTag', () => {
+    it('should return a valid component tag based on the componentMap and typeString', () => {
+        const componentMap = { 'component': 'tag' };
+        const typeString = 'component-subtype';
+        const result = getComponentTag(componentMap, typeString);
+        expect(result.tagName).toBe('tag-subtype');
+    });
+
+    it('should return null if no component is found', () => {
+        const componentMap = { };
+        const typeString = 'unknown-component';
+        const result = getComponentTag(componentMap, typeString);
+        expect(result.tagName).toBeNull();
+    });
+});
+
+describe('isRuleConditional', () => {
+    it('should return true if rule config type is conditional', () => {
+        const ruleConfig = { type: 'conditional' };
+        const result = isRuleConditional(ruleConfig);
+        expect(result).toBe(true);
+    });
+
+    it('should return false if rule config type is not conditional', () => {
+        const ruleConfig = { type: 'static' };
+        const result = isRuleConditional(ruleConfig);
+        expect(result).toBe(false);
+    });
+});
+
+describe('getDependants', () => {
+    it('should return dependants array for given fieldConfig and keys', () => {
+        const fieldConfig = { dependentKey: 'value' };
+        const keys = ['key1', 'key2'];
+        const result = getDependants(fieldConfig, keys);
+        expect(result).toBeInstanceOf(Array);
+    });
+});
+
+describe('extractAllFactsFromRule', () => {
+    it('should extract all facts from a set of rules', () => {
+        const rules = { all: [{ fact: 'fact1' }, { fact: 'fact2' }] };
+        const factSet = new Set();
+        extractAllFactsFromRule(rules, factSet);
+        expect(factSet.has('fact1')).toBe(true);
+        expect(factSet.has('fact2')).toBe(true);
+    });
+});
+
+describe('ruleChecker', () => {
+    it('should return computed rule if type is conditional', () => {
+        const values = {};
+        const rule = { condition: true, value: 'computed value' };
+        const result = ruleChecker(values, rule);
+        expect(result.type).toBe('conditional');
+    });
+
+    it('should return rule value if type is not conditional', () => {
+        const values = {};
+        const rule = { condition: false, value: 'static value' };
+        const result = ruleChecker(values, rule);
+        expect(result).toBe('static value');
+    });
+});
