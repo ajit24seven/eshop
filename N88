@@ -1,0 +1,98 @@
+// Define validation functions
+const validators = {
+  required: (message: string) => (value: any) =>
+    value != null && value !== "" ? undefined : message || "This field is required",
+  
+  maxLength: (max: number, message?: string) => (value: string | null | undefined) =>
+    value != null && value.length > max ? message || `Must be ${max} characters or less` : undefined,
+  
+  minLength: (min: number, message?: string) => (value: string | null | undefined) =>
+    value != null && value.length < min ? message || `Must be at least ${min} characters` : undefined,
+  
+  maxValue: (max: number, message?: string) => (value: number | null | undefined) =>
+    value != null && value > max ? message || `Must be ${max} or less` : undefined,
+  
+  minValue: (min: number, message?: string) => (value: number | null | undefined) =>
+    value != null && value < min ? message || `Must be at least ${min}` : undefined,
+  
+  pattern: (regex: RegExp, message: string) => (value: string | null | undefined) =>
+    value != null && !regex.test(value) ? message : undefined,
+  
+  // Custom validator with access to currentValue and allValues
+  custom: (validateFn: (currentValue: any, allValues: Record<string, any>) => boolean, message: string) =>
+    (currentValue: any, allValues: Record<string, any>) =>
+      validateFn(currentValue, allValues) ? undefined : message,
+};
+
+// Type definition for validation rule
+interface ValidationRule {
+  type: string;
+  value?: any;
+  message?: string;
+}
+
+// Function to get the correct validator based on type
+const getValidator = (rule: ValidationRule) => {
+  switch (rule.type) {
+    case 'required':
+      return validators.required(rule.message || "This field is required");
+    
+    case 'maxLength':
+      return validators.maxLength(rule.value, rule.message);
+    
+    case 'minLength':
+      return validators.minLength(rule.value, rule.message);
+    
+    case 'maxValue':
+      return validators.maxValue(rule.value, rule.message);
+    
+    case 'minValue':
+      return validators.minValue(rule.value, rule.message);
+    
+    case 'pattern':
+      return validators.pattern(rule.value, rule.message || "Invalid format");
+
+    case 'custom':
+      // Ensure `rule.value` is a function for custom validation
+      if (typeof rule.value === 'function') {
+        return validators.custom(rule.value, rule.message || "Invalid value");
+      } else {
+        throw new Error("Custom validation requires a function as 'value'");
+      }
+
+    default:
+      throw new Error(`Unknown validation type: ${rule.type}`);
+  }
+};
+
+// Function to apply all validations
+const applyValidations = (rules: ValidationRule[]) => {
+  return (currentValue: any, allValues: Record<string, any>) => {
+    for (const rule of rules) {
+      const validator = getValidator(rule);
+      
+      // Check if the validator needs both currentValue and allValues
+      const error = rule.type === 'custom'
+        ? (validator as (value: any, allValues: Record<string, any>) => string | undefined)(currentValue, allValues)
+        : validator(currentValue);
+      
+      if (error) {
+        return error; // Return the first validation error encountered
+      }
+    }
+    return undefined; // Return undefined if all validations pass
+  };
+};
+
+// Usage example
+const validationRules: ValidationRule[] = [
+  { type: 'required', message: "This field cannot be empty" },
+  { type: 'minLength', value: 5, message: "Must be at least 5 characters" },
+  { type: 'custom', value: (currentValue, allValues) => currentValue === allValues.confirmPassword, message: "Passwords must match" },
+];
+
+// Apply validations to a field
+const validateField = applyValidations(validationRules);
+
+// Now you can use `validateField` with Final Form or any form library
+export default validateField;
