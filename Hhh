@@ -32,3 +32,147 @@
     }
   }}">
 </clmt-form-builder>
+
+
+========
+
+
+
+// validation.ts
+
+export type ValidationRule<T> = {
+    value: T;
+    message: string;
+};
+
+export type CustomValidationFunction = (value: string, formValues: any) => boolean | string;
+
+export interface Validations {
+    min?: ValidationRule<number>;
+    max?: ValidationRule<number>;
+    minLength?: ValidationRule<number>;
+    maxLength?: ValidationRule<number>;
+    pattern?: ValidationRule<string>;
+    customValidation?: CustomValidationFunction | Record<string, CustomValidationFunction>;
+}
+
+const validationUtils = {
+    min: (value: string, rule: ValidationRule<number>): boolean | string => {
+        return value.length >= rule.value || rule.message;
+    },
+    
+    max: (value: string, rule: ValidationRule<number>): boolean | string => {
+        return value.length <= rule.value || rule.message;
+    },
+
+    minLength: (value: string, rule: ValidationRule<number>): boolean | string => {
+        return value.length >= rule.value || rule.message;
+    },
+
+    maxLength: (value: string, rule: ValidationRule<number>): boolean | string => {
+        return value.length <= rule.value || rule.message;
+    },
+
+    pattern: (value: string, rule: ValidationRule<string>): boolean | string => {
+        return new RegExp(rule.value).test(value) || rule.message;
+    },
+
+    customValidation: (value: string, formValues: any, customValidators: Record<string, CustomValidationFunction>): string[] => {
+        const errors: string[] = [];
+        for (const [key, validator] of Object.entries(customValidators)) {
+            const result = validator(value, formValues);
+            if (result !== true) {
+                errors.push(result);
+            }
+        }
+        return errors;
+    }
+};
+
+export const validate = (value: string, formValues: any, validations: Validations): string[] => {
+    const errors: string[] = [];
+
+    if (validations.min) {
+        const result = validationUtils.min(value, validations.min);
+        if (result !== true) {
+            errors.push(result as string);
+        }
+    }
+
+    if (validations.max) {
+        const result = validationUtils.max(value, validations.max);
+        if (result !== true) {
+            errors.push(result as string);
+        }
+    }
+
+    if (validations.minLength) {
+        const result = validationUtils.minLength(value, validations.minLength);
+        if (result !== true) {
+            errors.push(result as string);
+        }
+    }
+
+    if (validations.maxLength) {
+        const result = validationUtils.maxLength(value, validations.maxLength);
+        if (result !== true) {
+            errors.push(result as string);
+        }
+    }
+
+    if (validations.pattern) {
+        const result = validationUtils.pattern(value, validations.pattern);
+        if (result !== true) {
+            errors.push(result as string);
+        }
+    }
+
+    if (validations.customValidation) {
+        if (typeof validations.customValidation === 'function') {
+            const customError = validations.customValidation(value, formValues);
+            if (customError !== true) {
+                errors.push(customError);
+            }
+        } else {
+            const customErrors = validationUtils.customValidation(value, formValues, validations.customValidation);
+            errors.push(...customErrors);
+        }
+    }
+
+    return errors;
+};
+==========
+
+
+
+function resetField(form, fieldName, initialValues) {
+    if (initialValues.hasOwnProperty(fieldName)) {
+        form.change(fieldName, initialValues[fieldName]);
+    } else {
+        console.warn(`Field ${fieldName} does not exist in initialValues.`);
+    }
+}
+
+
+function validateField(form, fieldName, validationFn) {
+    const value = form.getFieldState(fieldName).value;
+    const errorElement = document.getElementById(`${fieldName}Error`);
+
+    // Call the validation function to get any error message
+    const errorMessage = validationFn(value);
+
+    if (errorMessage) {
+        form.setFieldState(fieldName, state => ({
+            ...state,
+            error: errorMessage
+        }));
+        errorElement.textContent = errorMessage;
+    } else {
+        form.setFieldState(fieldName, state => ({
+            ...state,
+            error: undefined
+        }));
+        errorElement.textContent = '';
+    }
+}
+
