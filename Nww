@@ -1,0 +1,46 @@
+// validationFunctions.ts
+import { ValidationRule } from './validators';
+
+const validationFunctions: {
+  [key: string]: (value: any, rule: ValidationRule) => string | undefined;
+} = {
+  required: (value: any, rule: ValidationRule) => (value ? undefined : rule.message),
+
+  min: (value: number, rule: ValidationRule) =>
+    typeof value === 'number' && value < (rule.value as number) ? rule.message : undefined,
+
+  max: (value: number, rule: ValidationRule) =>
+    typeof value === 'number' && value > (rule.value as number) ? rule.message : undefined,
+
+  minLength: (value: string, rule: ValidationRule) =>
+    typeof value === 'string' && value.length < (rule.value as number) ? rule.message : undefined,
+
+  maxLength: (value: string, rule: ValidationRule) =>
+    typeof value === 'string' && value.length > (rule.value as number) ? rule.message : undefined,
+
+  pattern: (value: string, rule: ValidationRule) =>
+    typeof value === 'string' && !(rule.value as RegExp).test(value) ? rule.message : undefined,
+};
+
+export default validationFunctions;
+
+// validators.ts
+import validationFunctions from './validationFunctions';
+
+export type ValidationRule = {
+  type: 'required' | 'min' | 'max' | 'minLength' | 'maxLength' | 'pattern';
+  value?: number | RegExp;
+  message: string;
+};
+
+// Compose validators dynamically from an array of ValidationRule objects
+export const composeValidators = (rules: ValidationRule[]) => (value: any): string | undefined => {
+  for (const rule of rules) {
+    const validate = validationFunctions[rule.type];
+    if (validate) {
+      const error = validate(value, rule);
+      if (error) return error; // Return the first validation error
+    }
+  }
+  return undefined; // Return undefined if all validations pass
+};
