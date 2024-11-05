@@ -1,0 +1,27 @@
+// Define the type for the rule types
+type ValidationRuleType = "required" | "min" | "max" | "minLength" | "maxLength" | "pattern";
+
+// Ensure rule has a type of ValidationRuleType
+interface IValidationRule {
+  type: string; // Allow any string to be passed for flexibility
+  // Other properties if needed
+}
+
+// Define the validationUtils object with specific validation functions
+const validationUtils: Record<ValidationRuleType, (value: string, rule: IValidationRule) => string | null> = {
+  required: (value, rule) => { /* Implementation */ },
+  min: (value, rule) => { /* Implementation */ },
+  max: (value, rule) => { /* Implementation */ },
+  minLength: (value, rule) => { /* Implementation */ },
+  maxLength: (value, rule) => { /* Implementation */ },
+  pattern: (value, rule) => { /* Implementation */ },
+};
+
+// Dynamically access validation function or return null if not found
+const validate = validationUtils[rule.type as ValidationRuleType] || null;
+
+// Usage in your function
+if (validate) {
+  const error = validate(newValue, rule);
+  if (error) return error;
+}
