@@ -1,4 +1,4 @@
-function mergeObjectsWithSameKeys(arr) {
+6function mergeObjectsWithSameKeys(arr) {
     return arr.reduce((acc, obj) => {
         Object.keys(obj).forEach(key => {
             if (acc[key] === undefined) {
@@ -24,3 +24,20 @@ const objects = [
 ];
 
 console.log(mergeObjectsWithSameKeys(objects));
+function mergeMatchingKeys(a, b) {
+  // Iterate over the keys in object 'a'
+  Object.keys(a).forEach(key => {
+    // If 'b' has the same key, update 'a' with 'b's value
+    if (b.hasOwnProperty(key)) {
+      a[key] = b[key];
+    }
+  });
+  return a;
+}
+
+// Example usage
+const a = { x: 1, y: 2, z: 3 };
+const b = { y: 20, z: 30, w: 40 };
+
+const merged = mergeMatchingKeys(a, b);
+console.log(merged); // Output: { x: 1, y: 20, z: 30 }
