@@ -1,0 +1,44 @@
+export class FormController implements IFormController {
+    host: ReactiveControllerHost;
+    private _formApi: any = null;
+    private _defaultValues: any = null;
+    private _values: any = null;
+    private _meta: any = null;
+    private _onSubmit: any = null;
+    private isInitialized: boolean = false;
+    public ruleExecutor: any = null;
+    public mutators: any = null;
+    public formValues: any = null;
+
+    constructor(host: any) {
+        (this.host = host).addController(this);
+    }
+
+    public initialize = (options: IFormOptions) => {
+        this._defaultValues = options.defaultValues;
+        this._values = options.values;
+        this._meta = options.meta;
+        this.ruleExecutor = options.ruleExecutor;
+        this._onSubmit = options.onSubmit;
+        if (!this.isInitialized) {
+            this.isInitialized = true;
+            this._formApi = createForm({
+                initialValues: this._values,
+                mutators: [].arrayMutators,
+                trigger: ({ field, value, state: any, changeValue }) => {
+                    const formState = state;
+                    formState.submitFailed = true;
+                    fields[field].touched = true;
+                    changeValue({ ...state, field, formState }, field, () => value);
+                },
+                change: ({ field, value, fieldState, state: any, changeValue }) => {
+                    let fState = !isNotEmpty(fieldState) ? fieldState : state.fields[field];
+                    changeValue({ ...state.fields, [field]: fState }, field, () => value);
+                },
+                onSubmit: this._onSubmit
+            });
+            this.mutators = this._formApi.mutators;
+            this.formValues = this.getFormState().values;
+        }
+    }
+}
