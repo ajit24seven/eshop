@@ -1,0 +1,52 @@
+import { BaseController, IBaseController } from '../base/base-controller';
+
+export interface IArrayController extends IBaseController {
+    id: string;
+    fieldState: any;
+}
+
+export class ArrayController extends BaseController implements IArrayController {
+    fieldState: any = {};
+
+    get id(): string {
+        return this.config.property;
+    }
+
+    get value(): string {
+        return this.fieldState?.value;
+    }
+
+    get readOnly(): boolean {
+        return this.formController._executeRule(this.config.readOnly);
+    }
+
+    initialize(options: any): void {
+        super.initialize(options);
+        if (this.id) {
+            this.unsubscribes.push(
+                this.formController._register(
+                    this.id,
+                    (fieldState: any) => {
+                        this.fieldState = fieldState;
+                        this.formValue = this.formController.formValues;
+                    },
+                    {
+                        value: true,
+                    },
+                ),
+            );
+        }
+        this.registerDependants();
+    }
+
+    public insert = (index: number, value: any): void => {
+        this.formController.mutators.insert(this.id, index, value);
+        this.host.requestUpdate();
+    };
+
+    public push = (value: any): void => {
+        this.formController.mutators.push(this.id, value);
+        console.log(this.fieldState, this.formController.formValues);
+        this.host.requestUpdate();
+    };
+}
