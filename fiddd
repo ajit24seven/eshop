@@ -1,0 +1,230 @@
+/**
+ * FormController manages the lifecycle and state of a form, including field registration, validation, 
+ * submission handling, and mutator management.
+ */
+export class FormController implements IFormController {
+    host: ReactiveControllerHost;
+    private _formApi: any = null;
+    private _defaultValues: any = {};
+    private _values: any = {};
+    private _meta: any = {};
+    private _onSubmit: any = null;
+    private isInitialized: boolean = false;
+    public ruleExecutor: any = null;
+    public mutators: any = {};
+    public formValues: any = {};
+
+    /**
+     * Constructs a new FormController instance.
+     * @param host The host component that will use this form controller.
+     */
+    constructor(host: any) {
+        this.host = host;
+        this.host.addController(this);
+    }
+
+    /**
+     * Initializes the form controller with the provided configuration options.
+     * This method can only be called once, as it prevents re-initialization after the form is created.
+     * @param options - Configuration options for initializing the form controller.
+     *   @property {Object} defaultValues - The default values for the form fields.
+     *   @property {Object} values - The initial values for the form fields.
+     *   @property {Object} meta - Metadata associated with the form (e.g., validation rules).
+     *   @property {Function} ruleExecutor - The function to execute custom validation rules.
+     *   @property {Function} onSubmit - The callback function to handle form submission.
+     */
+    public initialize(options: IFormOptions): void {
+        if (this.isInitialized) return;
+
+        const { defaultValues, values, meta, ruleExecutor, onSubmit } = options;
+        this._defaultValues = defaultValues || {};
+        this._values = values || {};
+        this._meta = meta || {};
+        this.ruleExecutor = ruleExecutor || null;
+        this._onSubmit = onSubmit || null;
+
+        // Ensure form creation only happens once
+        if (this._formApi) return;
+
+        this._formApi = createForm({
+            initialValues: this._values,
+            mutators: {
+                ...arrayMutators, // Import arrayMutators from the correct library if needed
+                trigger: this.handleTrigger,
+                change: this.handleChange,
+            },
+            onSubmit: this._onSubmit,
+        });
+
+        // Initialize mutators and form values
+        this.mutators = this._formApi?.mutators || {};
+        this.formValues = this.getFormState().values || {};
+
+        this.isInitialized = true;
+    }
+
+    /**
+     * Handles the trigger event for a specific field.
+     * This method is called when a field's validation state changes.
+     * @param field - The name of the field being triggered.
+     * @param value - The new value of the field.
+     * @param state - The current form state.
+     * @param changeValue - The function to update the value in the form state.
+     */
+    private handleTrigger = ({ field, value, state, changeValue }: any): void => {
+        const formState = state || {};
+        formState.submitFailed = true;
+        if (state?.fields?.[field]) {
+            state.fields[field].touched = true;
+        }
+        changeValue({ ...state, field, formState }, field, () => value);
+    }
+
+    /**
+     * Handles the change event for a specific field.
+     * This method is called when a field value changes.
+     * @param field - The name of the field being changed.
+     * @param value - The new value of the field.
+     * @param fieldState - The current state of the field.
+     * @param state - The current form state.
+     * @param changeValue - The function to update the field value in the form state.
+     */
+    private handleChange = ({ field, value, fieldState, state, changeValue }: any): void => {
+        const fState = fieldState || state?.fields?.[field];
+        changeValue({ ...state?.fields, [field]: fState }, field, () => value);
+    }
+
+    /**
+     * Submits the form. This will trigger form validation and submission if valid.
+     * If the form is not valid, submission will be prevented.
+     */
+    public async submit(): Promise<void> {
+        if (this._formApi) {
+            await this._formApi.submit();
+        } else {
+            console.error('Form API is not initialized.');
+        }
+    }
+
+    /**
+     * Registers a field within the form.
+     * This allows the form to track and manage the field's state.
+     * @param name - The name of the field to register.
+     * @param subscriber - The subscriber function that listens to field updates.
+     * @param subscription - An object indicating which field state properties the subscriber is interested in.
+     * @param config - Additional configuration for the field registration.
+     */
+    public registerField(name: string, subscriber: any, subscription: any, config?: any): void {
+        this._formApi?.registerField(name, subscriber, subscription, config);
+    }
+
+    /**
+     * Subscribes to updates for form state changes.
+     * @param subscriber - The function to call whenever the form state changes.
+     * @param subscription - An object that specifies which field state properties to subscribe to.
+     */
+    public subscribe(subscriber: (formState: IFormState) => void, subscription: { [name: string]: boolean }): void {
+        this._formApi?.subscribe(subscriber, subscription);
+    }
+
+    /**
+     * Executes a custom rule using the provided rule configuration.
+     * @param ruleConfig - The configuration for the rule to execute.
+     * @returns {boolean} - Returns true if the rule was executed successfully, otherwise false.
+     */
+    public executeRule(ruleConfig: any): boolean {
+        if (typeof this.ruleExecutor !== 'function' || !ruleConfig) return false;
+        return this.ruleExecutor(ruleConfig, {
+            _values: this.formValues,
+            _meta: this._meta,
+        });
+    }
+
+    /**
+     * Retrieves the form metadata.
+     * @returns {Object} - The metadata associated with the form.
+     */
+    public getMeta(): any {
+        return this._meta;
+    }
+
+    /**
+     * Sets the default value for a specific field.
+     * @param name - The name of the field to set the default value for.
+     * @param value - The value to set for the field.
+     */
+    private setDefaultValues(name: string, value: any): void {
+        if (this._formApi) {
+            this._formApi.change(name, value);
+            this._formApi.resetFieldState(name);
+        }
+    }
+
+    /**
+     * Resets a specific field or all fields in the form to their default values.
+     * @param name - The name of the field to reset (optional). If not provided, all fields will be reset.
+     */
+    public resetField(name?: string): void {
+        this._formApi?.batch(() => {
+            if (name) {
+                const value = this._defaultValues[name] ?? null;
+                this.setDefaultValues(name, value);
+            } else {
+                const registeredFields = this._formApi?.getRegisteredFields() || [];
+                registeredFields.forEach((fieldName: string) => {
+                    const value = this._defaultValues[fieldName] ?? null;
+                    this.setDefaultValues(fieldName, value);
+                });
+            }
+        });
+    }
+
+    /**
+     * Resets the form to its initial values or new provided values.
+     * @param initialValues - Optional initial values to reset the form to.
+     */
+    public reset(initialValues?: any): void {
+        this._formApi?.reset(initialValues);
+    }
+
+    /**
+     * Retrieves the current state of the form.
+     * @returns {IFormState} - The current form state.
+     */
+    public getFormState(): IFormState {
+        return this._formApi?.getState() || { values: {}, fields: {} };
+    }
+
+    /**
+     * Retrieves the current state of a specific field.
+     * @param field - The name of the field to get the state of.
+     * @returns {IFieldState} - The state of the specified field.
+     */
+    public getFieldState(field: string): IFieldState {
+        return this._formApi?.getFieldState(field) || { value: null, valid: false, touched: false };
+    }
+
+    /**
+     * Triggers validation for a specific field and returns whether the field is valid.
+     * @param name - The name of the field to trigger validation for.
+     * @returns {Promise<boolean>} - A promise that resolves to true if the field is valid, otherwise false.
+     */
+    public async trigger(name: string): Promise<boolean> {
+        if (this._formApi && this.mutators?.trigger) {
+            await this.mutators.trigger(name, this.getFieldState(name).value);
+            return Boolean(this.getFieldState(name)?.valid);
+        }
+        return false;
+    }
+
+    /**
+     * Changes the value of a specific field.
+     * @param name - The name of the field to change.
+     * @param value - The new value to set for the field.
+     * @param fieldState - Optionally, the state to update the field with.
+     */
+    public change(name: string, value: any, fieldState?: IFieldState): void {
+        if (this.mutators?.change) {
+            this.mutators.change(name, value, fieldState);
+        }
+    }
