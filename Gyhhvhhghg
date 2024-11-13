@@ -1,0 +1,140 @@
+export class FormController implements IFormController {
+    host: ReactiveControllerHost;
+    private _formApi: any = null;
+    private _defaultValues: any = null;
+    private _values: any = null;
+    private _meta: any = null;
+    private _onSubmit: any = null;
+    private _isInitialized: boolean = false;
+    public ruleExecutor: any = null;
+    public mutators: any = null;
+    public formValues: any = null;
+
+    constructor(host: any) {
+        this.host = host;
+        this.host.addController(this);
+    }
+
+    public _initialize = (options: IFormOptions) => {
+        this._defaultValues = options.defaultValues;
+        this._values = options.values;
+        this._meta = options.meta;
+        this.ruleExecutor = options.ruleExecutor;
+        this._onSubmit = options.onSubmit;
+        
+        if (this._isInitialized) return;
+        this._isInitialized = true;
+
+        this._formApi = createForm({
+            initialValues: this._values,
+            mutators: [...(Array.isArray(options.mutators) ? options.mutators : [])],
+            onChange: ({ field, value, formState }, { changeValue }) => {
+                formState.submitFailed = true;
+                formState.fields[field].touched = true;
+                changeValue({ ...formState, field, formState }, field, () => value);
+            },
+            onSubmit: this._onSubmit
+        });
+
+        this.mutators = this._formApi?.mutators;
+        this.formValues = this.getFormState()?.values;
+    }
+
+    public submit = async () => {
+        await this._formApi?.submit();
+    }
+
+    private onSubmit = (data: any, form: any, cb: any) => {
+        this._onSubmit?.(data, this._formApi, cb);
+    }
+
+public _register = (
+    name: any,
+    subscriber: any,
+    subscription: any,
+    config?: any
+) => {
+    this._formApi.registerField(name, subscriber, subscription, config);
+}
+
+public _subscribe = (subscriber: (formState: IFormState) => void, subscription: { [name: string]: boolean }) => {
+    this._formApi.subscribe(subscriber, subscription);
+}
+
+public _executeRule = (ruleConfig: any) => {
+    if (typeof this.ruleExecutor !== 'function' || isEmpty(ruleConfig)) {
+        return false;
+    }
+
+    return this.ruleExecutor(ruleConfig, {
+        _values: this.formValues,
+        _meta: this._meta,
+    });
+}
+
+public getMeta = () => {
+    return this._meta;
+}
+
+private setDefaultValues = (name: string, value: any) => {
+    this._formApi.change(name, value);
+    this._formApi.resetFieldState(name);
+}
+
+public resetField = (name?: string) => {
+    this._formApi.batch(() => {
+        if (isNotEmpty(name) && typeof name === 'string') {
+            const value = isNotEmpty(this._defaultValues[name]) ? this._defaultValues[name] : null;
+            this.setDefaultValues(name, value);
+        } else {
+            const registeredFields = this._formApi.getRegisteredFields();
+            const defaultValues = { ...this._defaultValues };
+            const values: any = { ...this.formValues };
+
+            registeredFields.forEach((name: string) => {
+                if (defaultValues.hasOwnProperty(name)) {
+                    values[name] = defaultValues[name];
+                }
+            });
+
+            for (const name in values) {
+                const value = isNotEmpty(values[name]) ? values[name] : null;
+                this.setDefaultValues(name, value);
+            }
+        }
+    });
+}
+}
+public reset = (initialValues?: any) => {
+    this._formApi.reset(initialValues)
+}
+
+public getFormState = (): IFormState => {
+    return this._formApi.getState()
+}
+
+public getFieldState = (field: string): IFieldState => {
+    return this._formApi.getFieldState(field)
+}
+
+public trigger = async (name: string) => {
+    await this.mutators.trigger(name, this.getFieldState(name).value);
+    return Boolean(this.getFieldState(name).valid);
+}
+
+public change = (name: string, value: any, fieldState?: IFieldState) => {
+    this.mutators.change(name, value, fieldState);
+}
+
+public setIn = {
+    state: any,
+    key: string,
+    value: any
+} => {
+    return setIn(state, key, value);
+}
+
+public getIn = {
+    state: any,
+    complexKey: string
+} => {
