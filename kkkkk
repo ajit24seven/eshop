@@ -1,0 +1,126 @@
+import { FormController } from './FormController'; // Adjust path
+import { createForm } from 'some-form-library'; // Ensure this is the actual form library you're using
+import { ReactiveControllerHost } from 'lit';
+
+describe('FormController Real Implementation', () => {
+  let formController: FormController;
+  let mockHost: ReactiveControllerHost;
+
+  // Set up necessary components before each test
+  beforeEach(() => {
+    // Create a real host component (in a LitElement context, for example)
+    mockHost = {
+      addController: jest.fn(),
+    } as any;
+
+    // Initialize the FormController
+    formController = new FormController(mockHost);
+
+    // Ensure the form API is set up correctly and the form is initialized
+    formController.initialize({
+      defaultValues: { name: 'John' },
+      values: { name: 'Doe' },
+      meta: {},
+      ruleExecutor: jest.fn(),
+      onSubmit: jest.fn(),
+    });
+  });
+
+  // Clean up after each test if necessary
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should initialize the form correctly with initial values', () => {
+    // Verify initialization logic
+    expect(formController.isInitialized).toBe(true);
+    expect(formController._defaultValues).toEqual({ name: 'John' });
+    expect(formController.formValues).toEqual({ name: 'Doe' });
+  });
+
+  it('should handle form submission', async () => {
+    const onSubmit = jest.fn();
+    
+    formController.initialize({
+      defaultValues: { name: 'John' },
+      values: { name: 'Doe' },
+      meta: {},
+      ruleExecutor: jest.fn(),
+      onSubmit: onSubmit,
+    });
+
+    // Call the submit method
+    await formController.submit();
+
+    // Verify that the form's onSubmit method was called
+    expect(onSubmit).toHaveBeenCalled();
+  });
+
+  it('should register fields correctly', () => {
+    const subscriber = jest.fn();
+    const subscription = { value: true };
+    const name = 'nameField';
+
+    // Register the field
+    formController.registerField(name, subscriber, subscription);
+
+    // Verify that registerField was called with correct arguments
+    expect(formController._formApi.registerField).toHaveBeenCalledWith(name, subscriber, subscription, undefined);
+  });
+
+  it('should update field value when change method is called', () => {
+    const name = 'nameField';
+    const value = 'Jane Doe';
+    const fieldState = { touched: true, valid: true };
+
+    // Call the change method
+    formController.change(name, value, fieldState);
+
+    // Verify that the formApi's change method was called
+    expect(formController._formApi.change).toHaveBeenCalledWith(name, value, fieldState);
+  });
+
+  it('should validate and trigger field correctly', async () => {
+    const name = 'nameField';
+
+    // Trigger the field validation
+    const isValid = await formController.trigger(name);
+
+    // Check if the field is validated properly
+    expect(isValid).toBe(true);  // Based on field state, this should return true
+    expect(formController._formApi.getFieldState).toHaveBeenCalledWith(name);
+  });
+
+  it('should reset form field correctly', () => {
+    const name = 'nameField';
+    const defaultValue = 'John';
+
+    // Reset field
+    formController.resetField(name);
+
+    // Ensure field was reset to default value
+    expect(formController._formApi.resetFieldState).toHaveBeenCalledWith(name);
+    expect(formController._formApi.change).toHaveBeenCalledWith(name, defaultValue, undefined);
+  });
+
+  it('should reset entire form with new initial values', () => {
+    const newValues = { name: 'Alex' };
+
+    // Call reset with new values
+    formController.reset(newValues);
+
+    // Ensure form reset was triggered
+    expect(formController._formApi.reset).toHaveBeenCalledWith(newValues);
+  });
+
+  it('should execute custom validation rule correctly', () => {
+    const ruleConfig = { customRule: true };
+
+    // Simulate ruleExecutor returning true
+    formController.ruleExecutor = (config: any) => config.customRule;
+
+    const result = formController.executeRule(ruleConfig);
+
+    expect(result).toBe(true);
+  });
+});
