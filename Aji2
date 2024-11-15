@@ -1,0 +1,127 @@
+import { FormController } from './form-controller';
+
+describe('FormController - Additional Methods', () => {
+  let formController;
+
+  beforeEach(() => {
+    formController = new FormController({});
+    formController._formApi = {
+      registerField: jest.fn(),
+      subscribe: jest.fn(),
+      change: jest.fn(),
+      resetFieldState: jest.fn()
+    };
+  });
+
+  describe('_onSubmit', () => {
+    it('should call _onSubmit method with data, formApi, and callback', () => {
+      const data = { field: 'value' };
+      const formApi = formController._formApi;
+      const callback = jest.fn();
+
+      formController._onSubmit(data, formApi, callback);
+
+      expect(formController._onSubmit).toHaveBeenCalledWith(data, formApi, callback);
+    });
+  });
+
+  describe('_register', () => {
+    it('should register a field if name is provided', () => {
+      const name = 'testField';
+      const subscriber = jest.fn();
+      const subscription = { testField: true };
+      const config = { type: 'text' };
+
+      formController._register({ name, subscriber, subscription, config });
+
+      expect(formController._formApi.registerField).toHaveBeenCalledWith(
+        name,
+        subscriber,
+        subscription,
+        config
+      );
+    });
+
+    it('should not register a field if name is not provided', () => {
+      const subscriber = jest.fn();
+      const subscription = { testField: true };
+      const config = { type: 'text' };
+
+      formController._register({ name: '', subscriber, subscription, config });
+
+      expect(formController._formApi.registerField).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('_subscribe', () => {
+    it('should call formApi.subscribe with subscriber and subscription', () => {
+      const subscriber = jest.fn();
+      const subscription = { testField: true };
+
+      formController._subscribe({ subscriber, subscription });
+
+      expect(formController._formApi.subscribe).toHaveBeenCalledWith(subscriber, subscription);
+    });
+  });
+
+  describe('_executeRule', () => {
+    it('should return false if ruleExecutor is not a function', () => {
+      formController.ruleExecutor = null;
+
+      const result = formController._executeRule({ someConfig: true });
+
+      expect(result).toBe(false);
+    });
+
+    it('should return false if ruleConfig is empty', () => {
+      formController.ruleExecutor = jest.fn();
+      
+      const result = formController._executeRule({});
+
+      expect(result).toBe(false);
+    });
+
+    it('should call ruleExecutor with ruleConfig and return its result', () => {
+      const ruleConfig = { someConfig: true };
+      formController.ruleExecutor = jest.fn().mockReturnValue(true);
+
+      const result = formController._executeRule(ruleConfig);
+
+      expect(formController.ruleExecutor).toHaveBeenCalledWith(ruleConfig);
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('getMeta', () => {
+    it('should return the _meta property', () => {
+      formController._meta = { someMeta: 'metaValue' };
+
+      const meta = formController.getMeta();
+
+      expect(meta).toEqual(formController._meta);
+    });
+  });
+
+  describe('setDefaultValues', () => {
+    it('should call formApi.change and resetFieldState if formApi is initialized', () => {
+      const name = 'testField';
+      const value = 'newValue';
+
+      formController.setDefaultValues(name, value);
+
+      expect(formController._formApi.change).toHaveBeenCalledWith(name, value);
+      expect(formController._formApi.resetFieldState).toHaveBeenCalledWith(name);
+    });
+
+    it('should not call formApi.change and resetFieldState if formApi is not initialized', () => {
+      formController._formApi = null;
+      const name = 'testField';
+      const value = 'newValue';
+
+      formController.setDefaultValues(name, value);
+
+      expect(formController._formApi?.change).toBeUndefined();
+      expect(formController._formApi?.resetFieldState).toBeUndefined();
+    });
+  });
+});
