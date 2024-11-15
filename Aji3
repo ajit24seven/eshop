@@ -1,0 +1,134 @@
+import { FormController } from './form-controller';
+
+describe('FormController - Additional Methods with Edge Cases', () => {
+  let formController;
+
+  beforeEach(() => {
+    formController = new FormController({});
+    formController._formApi = {
+      batch: jest.fn((fn) => fn()),
+      getRegisteredFields: jest.fn().mockReturnValue(['field1', 'field2']),
+      getState: jest.fn().mockReturnValue({ values: {} }),
+      getFieldState: jest.fn((field) => ({ name: field, valid: true, value: 'value' })),
+      reset: jest.fn(),
+    };
+    formController.mutators = {
+      trigger: jest.fn(),
+      change: jest.fn(),
+    };
+    formController._defaultValues = { field1: 'default1', field2: 'default2' };
+    formController._values = { field1: 'value1', field2: 'value2' };
+  });
+
+  describe('resetField', () => {
+    it('should handle a missing default value for a field gracefully', () => {
+      const name = 'field3';
+      formController.setDefaultValues = jest.fn();
+
+      formController.resetField(name);
+
+      // Expect setDefaultValues not to be called if field is not in default values
+      expect(formController.setDefaultValues).not.toHaveBeenCalled();
+    });
+
+    it('should not reset unregistered fields when name is not provided', () => {
+      formController._formApi.getRegisteredFields.mockReturnValue(['field1']); // Only one registered field
+      formController.setDefaultValues = jest.fn();
+
+      formController.resetField();
+
+      // Only the registered field should be reset
+      expect(formController.setDefaultValues).toHaveBeenCalledWith('field1', 'default1');
+      expect(formController.setDefaultValues).not.toHaveBeenCalledWith('field2', 'default2');
+    });
+  });
+
+  describe('reset', () => {
+    it('should call formApi.reset with empty object if no initial values provided', () => {
+      formController.reset();
+
+      expect(formController._formApi.reset).toHaveBeenCalledWith({});
+    });
+  });
+
+  describe('getFormState', () => {
+    it('should return null if formApi is not initialized', () => {
+      formController._formApi = null;
+
+      const formState = formController.getFormState();
+
+      expect(formState).toBeNull();
+    });
+  });
+
+  describe('getFieldState', () => {
+    it('should return null if formApi is not initialized', () => {
+      formController._formApi = null;
+
+      const fieldState = formController.getFieldState('field1');
+
+      expect(fieldState).toBeNull();
+    });
+
+    it('should return undefined if field is not registered', () => {
+      formController._formApi.getFieldState = jest.fn(() => undefined);
+
+      const fieldState = formController.getFieldState('unregisteredField');
+
+      expect(fieldState).toBeUndefined();
+    });
+  });
+
+  describe('trigger', () => {
+    it('should return false if formApi is not initialized', async () => {
+      formController._formApi = null;
+
+      const result = await formController.trigger('field1');
+
+      expect(result).toBe(false);
+    });
+
+    it('should handle trigger failures gracefully', async () => {
+      formController.mutators.trigger = jest.fn(() => Promise.reject(new Error('Trigger failed')));
+
+      const result = await formController.trigger('field1');
+
+      expect(result).toBe(false);
+    });
+
+    it('should handle invalid field state gracefully', async () => {
+      formController.getFieldState = jest.fn().mockReturnValue(null);
+
+      const result = await formController.trigger('field1');
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('change', () => {
+    it('should handle null field state gracefully', () => {
+      const name = 'field1';
+      const value = 'newValue';
+
+      formController.change(name, value, null);
+
+      expect(formController.mutators.change).toHaveBeenCalledWith(name, value, null);
+    });
+
+    it('should handle empty field state object', () => {
+      const name = 'field1';
+      const value = 'newValue';
+      const fieldState = {};
+
+      formController.change(name, value, fieldState);
+
+      expect(formController.mutators.change).toHaveBeenCalledWith(name, value, fieldState);
+    });
+
+    it('should not throw an error if mutators.change is not a function', () => {
+      formController.mutators.change = 'notAFunction';
+
+      expect(() => formController.change('field1', 'newValue', {})).not.toThrow();
+    });
+  });
+});
