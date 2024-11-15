@@ -1,0 +1,148 @@
+import { FormController } from './form-controller';
+
+describe('FormController', () => {
+  let host;
+  let formController;
+
+  beforeEach(() => {
+    host = { addController: jest.fn() }; // Mock host with addController function
+    formController = new FormController(host);
+  });
+
+  describe('constructor', () => {
+    it('should add itself as a controller to the host', () => {
+      expect(formController.host).toBe(host);
+      expect(host.addController).toHaveBeenCalledWith(formController);
+    });
+  });
+
+  describe('initialize', () => {
+    it('should initialize all options if provided', () => {
+      const options = {
+        defaultValues: { name: 'John' },
+        values: { age: 30 },
+        meta: { editable: true },
+        ruleExecutor: jest.fn(),
+        onSubmit: jest.fn()
+      };
+
+      formController.initialize(options);
+
+      expect(formController._defaultValues).toEqual(options.defaultValues);
+      expect(formController._values).toEqual(options.values);
+      expect(formController._meta).toEqual(options.meta);
+      expect(formController.ruleExecutor).toBe(options.ruleExecutor);
+      expect(formController._onSubmit).toBe(options.onSubmit);
+    });
+
+    it('should initialize with empty values if no options are provided', () => {
+      formController.initialize({});
+
+      expect(formController._defaultValues).toEqual({});
+      expect(formController._values).toEqual({});
+      expect(formController._meta).toEqual({});
+      expect(formController.ruleExecutor).toBe(null);
+      expect(formController._onSubmit).toBe(null);
+    });
+
+    it('should not reinitialize formApi if it is already initialized', () => {
+      formController._formApi = { initialized: true }; // Simulate formApi already initialized
+      const createFormSpy = jest.spyOn(formController, 'createForm');
+
+      formController.initialize({});
+
+      expect(createFormSpy).not.toHaveBeenCalled();
+    });
+
+    it('should call createForm if formApi is not initialized', () => {
+      formController._formApi = null;
+      const createFormSpy = jest.spyOn(formController, 'createForm');
+
+      formController.initialize({});
+
+      expect(createFormSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('formValues', () => {
+    it('should return the correct values from getFormState', () => {
+      const mockValues = { name: 'John', age: 30 };
+      formController.getFormState = jest.fn().mockReturnValue({ values: mockValues });
+
+      expect(formController.formValues).toEqual(mockValues);
+    });
+
+    it('should return undefined if getFormState does not return values', () => {
+      formController.getFormState = jest.fn().mockReturnValue({});
+
+      expect(formController.formValues).toBeUndefined();
+    });
+  });
+
+  describe('mutators', () => {
+    it('should return the mutators from formApi if formApi is initialized', () => {
+      const mockMutators = { setName: jest.fn() };
+      formController._formApi = { mutators: mockMutators };
+
+      expect(formController.mutators).toBe(mockMutators);
+    });
+
+    it('should return undefined if formApi is not initialized', () => {
+      formController._formApi = null;
+
+      expect(formController.mutators).toBeUndefined();
+    });
+  });
+
+  describe('submit', () => {
+    it('should call submit on formApi if formApi is initialized', async () => {
+      formController._formApi = { submit: jest.fn() };
+
+      await formController.submit();
+
+      expect(formController._formApi.submit).toHaveBeenCalled();
+    });
+
+    it('should handle formApi not initialized by logging an error', async () => {
+      console.error = jest.fn();
+      formController._formApi = null;
+
+      await formController.submit();
+
+      expect(console.error).toHaveBeenCalledWith('Form API is not initialized.');
+    });
+
+    it('should catch and log an error if formApi.submit throws an error', async () => {
+      formController._formApi = { submit: jest.fn().mockRejectedValue(new Error('Submission failed')) };
+      console.error = jest.fn();
+
+      await formController.submit();
+
+      expect(console.error).toHaveBeenCalledWith('Submission failed');
+    });
+  });
+
+  describe('edge cases', () => {
+    describe('initialize with partial options', () => {
+      it('should initialize only the options provided', () => {
+        formController.initialize({ values: { age: 25 }, meta: { status: 'active' } });
+
+        expect(formController._defaultValues).toEqual({});
+        expect(formController._values).toEqual({ age: 25 });
+        expect(formController._meta).toEqual({ status: 'active' });
+        expect(formController.ruleExecutor).toBe(null);
+        expect(formController._onSubmit).toBe(null);
+      });
+    });
+
+    describe('formValues with undefined state', () => {
+      it('should handle getFormState returning null or undefined', () => {
+        formController.getFormState = jest.fn().mockReturnValue(null);
+
+        expect(formController.formValues).toBeUndefined();
+      });
+    });
+  });
+});
+
+
