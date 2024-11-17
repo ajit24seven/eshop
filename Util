@@ -1,0 +1,75 @@
+import { validators } from './validators';
+
+describe('validators', () => {
+  describe('required', () => {
+    it('should return an error message if the value is empty', () => {
+      const result = validators.required('', { message: 'This field is required' });
+      expect(result).toBe('This field is required');
+    });
+
+    it('should return true if the value is not empty', () => {
+      const result = validators.required('test', { message: 'This field is required' });
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('min', () => {
+    it('should return an error message if the value is less than the minimum', () => {
+      const result = validators.min('123', { value: 5, message: 'Must be at least 5' });
+      expect(result).toBe('Must be at least 5');
+    });
+
+    it('should return true if the value meets the minimum', () => {
+      const result = validators.min('12345', { value: 5, message: 'Must be at least 5' });
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('max', () => {
+    it('should return an error message if the value exceeds the maximum', () => {
+      const result = validators.max('123456', { value: 5, message: 'Must be 5 or less' });
+      expect(result).toBe('Must be 5 or less');
+    });
+
+    it('should return true if the value is within the maximum', () => {
+      const result = validators.max('1234', { value: 5, message: 'Must be 5 or less' });
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('minLength', () => {
+    it('should return an error message if the value length is less than the minimum', () => {
+      const result = validators.minLength('abc', { value: 5, message: 'Must be at least 5 characters' });
+      expect(result).toBe('Must be at least 5 characters');
+    });
+
+    it('should return true if the value length meets the minimum', () => {
+      const result = validators.minLength('abcde', { value: 5, message: 'Must be at least 5 characters' });
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('maxLength', () => {
+    it('should return an error message if the value length exceeds the maximum', () => {
+      const result = validators.maxLength('abcdef', { value: 5, message: 'Must be 5 characters or less' });
+      expect(result).toBe('Must be 5 characters or less');
+    });
+
+    it('should return true if the value length is within the maximum', () => {
+      const result = validators.maxLength('abcde', { value: 5, message: 'Must be 5 characters or less' });
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('pattern', () => {
+    it('should return an error message if the value does not match the pattern', () => {
+      const result = validators.pattern('abc', { value: '^[0-9]+$', message: 'Invalid format' });
+      expect(result).toBe('Invalid format');
+    });
+
+    it('should return true if the value matches the pattern', () => {
+      const result = validators.pattern('123', { value: '^[0-9]+$', message: 'Invalid format' });
+      expect(result).toBe(true);
+    });
+  });
+});
