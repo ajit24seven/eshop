@@ -1,0 +1,52 @@
+class FetchPoolManager {
+  constructor(maxConcurrent = 3) {
+    this.maxConcurrent = maxConcurrent; // Maximum concurrent fetch calls
+    this.queue = []; // Queue of fetch requests
+    this.activeCount = 0; // Current active fetch calls
+  }
+
+  // Add a fetch task to the queue
+  add(fetchTask) {
+    return new Promise((resolve, reject) => {
+      this.queue.push(() => fetchTask().then(resolve).catch(reject));
+      this.runNext(); // Attempt to run the next task
+    });
+  }
+
+  // Run the next task in the queue if possible
+  runNext() {
+    if (this.activeCount >= this.maxConcurrent || this.queue.length === 0) {
+      return;
+    }
+
+    this.activeCount++; // Increment active count
+    const nextTask = this.queue.shift(); // Dequeue the next fetch task
+
+    nextTask().finally(() => {
+      this.activeCount--; // Decrement active count when the task is complete
+      this.runNext(); // Attempt to run the next task
+    });
+  }
+}
+
+// Example Usage
+const poolManager = new FetchPoolManager(3);
+
+// Example fetch tasks
+const fetchTask = (url) => () =>
+  fetch(url).then((res) => res.json());
+
+// Add fetch calls to the pool
+const urls = [
+  'https://jsonplaceholder.typicode.com/posts/1',
+  'https://jsonplaceholder.typicode.com/posts/2',
+  'https://jsonplaceholder.typicode.com/posts/3',
+  'https://jsonplaceholder.typicode.com/posts/4',
+  'https://jsonplaceholder.typicode.com/posts/5',
+];
+
+urls.forEach((url) => {
+  poolManager.add(() => fetchTask(url))
+    .then((data) => console.log('Fetched:', data))
+    .catch((err) => console.error('Error:', err));
+});
