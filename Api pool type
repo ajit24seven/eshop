@@ -1,0 +1,47 @@
+class FetchPoolManager {
+  maxConcurrent: number;
+  queue: (() => Promise<any>)[] = []; // Queue of tasks
+  activeCount = 0;
+
+  constructor(maxConcurrent: number) {
+    this.maxConcurrent = maxConcurrent;
+  }
+
+  // Add a fetch task
+  add(fetchTask: () => Promise<any>): Promise<any> {
+    return new Promise((resolve, reject) => {
+      this.queue.push(() => fetchTask().then(resolve).catch(reject));
+      this.runNext();
+    });
+  }
+
+  // Run the next task in the queue if possible
+  private runNext() {
+    if (this.activeCount >= this.maxConcurrent || this.queue.length === 0) {
+      return;
+    }
+
+    this.activeCount++; // Increment active count
+    const nextTask = this.queue.shift(); // Dequeue the next fetch task
+
+    if (nextTask) {
+      nextTask().finally(() => {
+        this.activeCount--; // Decrement active count when the task is complete
+        this.runNext(); // Attempt to run the next task
+      });
+    }
+  }
+}
+
+// Example Usage
+const poolManager = new FetchPoolManager(3);
+
+// Example fetch tasks
+const fetchTask = (url: string) => () =>
+  fetch(url).then((res) => res.json());
+
+// Add fetch calls to the pool
+poolManager.add(fetchTask('https://api.example.com/1')).then(console.log);
+poolManager.add(fetchTask('https://api.example.com/2')).then(console.log);
+poolManager.add(fetchTask('https://api.example.com/3')).then(console.log);
+poolManager.add(fetchTask('https://api.example.com/4')).then(console.log);
