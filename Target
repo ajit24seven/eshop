@@ -1,0 +1,78 @@
+import { LitElement, html, css } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
+
+@customElement('kyk-alert-notification')
+export class AlertNotification extends LitElement {
+  static styles = css`
+    :host {
+      display: block;
+    }
+  `;
+
+  @property({ attribute: false })
+  notification;
+
+  @property({ attribute: false })
+  onClose: (key: any, isClosedByUser?: boolean) => void;
+
+  @property({ attribute: false })
+  onRemove: (key: string, isClosedByUser?: boolean) => void;
+
+  private handleOutsideClick;
+
+  constructor() {
+    super();
+    this.handleOutsideClick = this._handleOutsideClick.bind(this);
+  }
+
+  firstUpdated() {
+    document.addEventListener('click', this.handleOutsideClick);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    document.removeEventListener('click', this.handleOutsideClick);
+  }
+
+  _handleOutsideClick(event) {
+    const path = event.composedPath();
+    const toast = this.shadowRoot.querySelector('sc-toast');
+
+    // Check if any element in the event path is the `sc-toast`
+    if (toast && !path.includes(toast)) {
+      this._closeNotification();
+    }
+  }
+
+  _closeNotification() {
+    const { key } = this.notification || {};
+    if (key) {
+      this.onRemove(key, true); // Call onRemove with `isClosedByUser` set to true
+    }
+  }
+
+  render() {
+    const { key, message, type, duration, closable, title, open } = this.notification || {};
+
+    return html`
+      <sc-toast
+        .key=${key}
+        .open=${open}
+        .type=${type || 'success'}
+        placement="right_top"
+        .duration=${duration || 3000}
+        ?closable=${closable || false}
+        @sc-after-hide=${() => this.onhide(key)}
+        .title=${title || ''}
+      >
+        <div style="display: flex; justify-content: space-between; gap: 5px; align-items: center;">
+          ${message}
+        </div>
+      </sc-toast>
+    `;
+  }
+
+  onhide(key = '') {
+    this.onRemove(key);
+  }
+}
