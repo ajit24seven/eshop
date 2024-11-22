@@ -1,0 +1,70 @@
+import { LitElement, html, css } from 'lit';
+
+class MyModal extends LitElement {
+  static styles = css`
+    :host {
+      display: block;
+      position: relative;
+    }
+    .modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      border-radius: 5px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+    }
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+    }
+    .hidden {
+      display: none;
+    }
+  `;
+
+  static properties = {
+    isOpen: { type: Boolean },
+  };
+
+  constructor() {
+    super();
+    this.isOpen = false;
+    this._boundHandleClickOutside = this._handleClickOutside.bind(this);
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener('click', this._boundHandleClickOutside);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    document.removeEventListener('click', this._boundHandleClickOutside);
+  }
+
+  _handleClickOutside(event) {
+    if (this.isOpen && !this.shadowRoot.contains(event.composedPath()[0])) {
+      this.isOpen = false;
+    }
+  }
+
+  render() {
+    return html`
+      <div class="overlay ${this.isOpen ? '' : 'hidden'}"></div>
+      <div class="modal ${this.isOpen ? '' : 'hidden'}">
+        <slot></slot>
+      </div>
+    `;
+  }
+}
+
+customElements.define('my-modal', MyModal);
