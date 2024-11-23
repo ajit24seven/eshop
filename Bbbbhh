@@ -1,0 +1,11 @@
+function convertToArrayNotation(str) {
+    const keys = str.split('.'); // Split the string by '.'
+    return keys.map(key => `['${key}']`).join('');
+}
+
+// Example usage
+const input = 'abg.gff.fgf';
+const output = convertToArrayNotation(input);
+console.log(output);
+
+// Output: ['abg']['gff']['fgf']
