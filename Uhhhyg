@@ -1,0 +1,17 @@
+function getValueFromProp(rowData, str) {
+    const keys = str.split('.'); // Split the string into an array of keys
+    return keys.reduce((current, key) => current ? current[key] : undefined, rowData);
+}
+
+// Example usage
+const rowData = {
+    abc: {
+        xyz: {
+            cbd: "desired value"
+        }
+    }
+};
+
+const dotString = "abc.xyz.cbd";
+const result = getValueFromProp(rowData, dotString);
+console.log(result); // Output: "desired value"
