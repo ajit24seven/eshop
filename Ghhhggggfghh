@@ -1,0 +1,88 @@
+/**
+ * Utility function to change the value and field state of a field in Final Form
+ * @param {Object} form - The Final Form instance
+ * @param {string} fieldName - The name of the field to update
+ * @param {any} newValue - The new value to set for the field
+ * @param {Object} fieldStateUpdates - An object containing field state updates (e.g., touched, dirty, error)
+ */
+function updateFieldValueAndState(form, fieldName, newValue, fieldStateUpdates = {}) {
+  const { mutators } = form;
+
+  if (!mutators || typeof mutators.changeValue !== "function") {
+    throw new Error("The Final Form mutator `changeValue` is not defined.");
+  }
+
+  // Change the field value
+  mutators.changeValue(form.getState(), fieldName, () => newValue);
+
+  // Update the field state
+  const state = form.getState();
+  const field = state.fields[fieldName];
+
+  if (field) {
+    Object.keys(fieldStateUpdates).forEach((key) => {
+      if (key in field) {
+        field[key] = fieldStateUpdates[key];
+      }
+    });
+
+    // Notify listeners of the change
+    field.changeValue(newValue);
+  } else {
+    console.warn(`Field "${fieldName}" does not exist in the form.`);
+  }
+}
+
+
+import { createForm } from "final-form";
+
+const form = createForm({
+  onSubmit: (values) => console.log("Submitted values:", values),
+  initialValues: { name: "John Doe" }
+});
+
+form.registerField(
+  "name",
+  (state) => console.log("Field state updated:", state),
+  { value: true, touched: true, error: true }
+);
+
+form.mutators = {
+  changeValue: (state, field, setValue) => {
+    const fieldState = state.fields[field];
+    if (fieldState) {
+      fieldState.value = setValue(fieldState.value);
+    }
+  }
+};
+
+// Use the utility function
+updateFieldValueAndState(form, "name", "Jane Doe", { touched: true, error: null });
+
+
+
+/**
+ * A utility function to change the value and field state of a field using Final Form.
+ * @param {Object} state - The current state of the Final Form.
+ * @param {string} fieldName - The name of the field to modify.
+ * @param {any} newValue - The new value to set for the field.
+ * @param {Object} fieldStateUpdates - Additional updates for the field state (e.g., touched, error).
+ */
+function changeValueAndState(state, fieldName, newValue, fieldStateUpdates = {}) {
+  const field = state.fields[fieldName];
+
+  if (!field) {
+    throw new Error(`Field "${fieldName}" does not exist.`);
+  }
+
+  // Update the field's value
+  field.value = newValue;
+
+  // Apply additional field state updates
+  Object.keys(fieldStateUpdates).forEach((key) => {
+    if (key in field) {
+      field[key] = fieldStateUpdates[key];
+    }
+  });
+}
+
