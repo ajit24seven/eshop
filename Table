@@ -1,0 +1,455 @@
+import { LitElement, html, nothing } from 'lit';
+import { DEFAULT_COLOR, DISPLAY_TYPE, VARIANT } from '../constants/common';
+import { getDataSource } from '../rdm-store/rdm.store';
+import {
+  isEmpty,
+  isNotEmpty,
+  executeRuleConfig,
+  formatTableData,
+  extractComponentType,
+} from '../utils';
+
+import { executeRuleConfig } from '../form-builder/rule-engine';
+import AppContextMixin from '../mixins/app-context';
+import { PageBase } from '../shared/PageBase';
+import { extractComponentType } from '../form-builder/utils';
+import './cell-item';
+import { getValue, getValueFromProp } from '../element.util';
+
+export class TableBuilder extends AppContextMixin(LitElement) {
+  static styles = [PageBase.styles];
+
+  static properties = {
+    data: { type: Array },
+    totalCount: { attribute: true },
+    selectedRows: {},
+    editedData: { state: true },
+    paginationConfig: {},
+    actionLoader: {},
+    formConfig: {},
+    noData: {},
+    expandableConfig: { attribute: false },
+    toggleAction: { state: true },
+  };
+
+  constructor() {
+    super();
+    this.selectedRows = {};
+    this.actionLoader = {};
+    this.toggleAction = { enabled: false, rowId: -1 };
+  }
+
+  emit(eventName, detail, cb) {
+    // Add emit implementation here
+  }
+}
+
+emit(eventName, detail, cb) {
+    const event = new CustomEvent(eventName, {
+        detail: { ...detail, callback: cb || null },
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+    });
+    this.dispatchEvent(event);
+}
+
+get renderParentRow() {
+    return this.expandableConfig?.renderParentRow;
+}
+
+get rowExpandable() {
+    return this.expandableConfig?.rowExpandable;
+}
+
+get isExpandable() {
+    return this.expandableConfig?.isExpandable;
+}
+
+get rowExpandRender() {
+    return this.expandableConfig?.rowExpandRender;
+}
+
+_actionHandler(data, cb) {
+    this.emit('actionHandler', { data }, cb);
+}
+
+_actionEnabler(rowData, cb) {
+    this.emit('actionEnabler', { data: rowData }, cb);
+}
+cellClickHandler(handler, rowData) {
+    const { keys, task, target } = handler || {};
+    if (task === 'navigate') {
+        const subPath = Array.isArray(keys)
+            ? keys.map(key => rowData[key]).join('/')
+            : '';
+        this.navigate(`${target}/${subPath}`);
+    } else {
+        const data = {
+            selectAll: false,
+            selectedData: [{ index: rowData.$key, data: rowData }],
+        };
+        this._actionHandler({ rowData: data, actionName: task });
+    }
+}
+
+getColor(value, displayInfo) {
+    const color = displayInfo || {};
+    if (color) {
+        if (typeof color === 'object') {
+            return color[String(value).toLowerCase()] || DEFAULT_COLOR;
+        }
+        return color;
+    }
+    return DEFAULT_COLOR;
+}
+
+getDataSourceDescription = (dataSource, code) => {
+    if (isEmpty(code)) return '';
+    const { descriptionMap } = getDataSource(dataSource);
+    return code
+        .toString()
+        .split(';')
+        .map(c => {
+            return descriptionMap.get(c.trim());
+        })
+        .join(', ');
+};
+
+getCellValue(value, rowData, column) {
+    const { combinedAccessor, displayInfo } = column || {};
+    const { dataSource } = displayInfo || {};
+
+    if (Array.isArray(combinedAccessor) && combinedAccessor.length > 0) {
+        const nullChecker = [];
+        const appendedValue = combinedAccessor.reduce((formatted, current) => {
+            if (current.startsWith('${') && current.endsWith('}')) {
+                const data = rowData[current.slice(2, current.length - 1)] ?? '';
+                nullChecker.push(data);
+                return formatted.concat(data);
+            }
+            return formatted.concat(current);
+        }, []);
+
+        return nullChecker.some(val => val === '') ? appendedValue : '';
+    }
+
+    const typeOfValue = typeof value;
+
+    if (typeOfValue === 'number' && typeOfValue !== 'boolean' && isEmpty(value)) {
+        return '';
+    }
+
+    if (isNotEmpty(dataSource)) {
+        const rdmValue = this.getDataSourceDescription(dataSource, value);
+        return isEmpty(rdmValue) ? '--' : rdmValue;
+    }
+
+    return value;
+}
+
+buildCellConfig(column) {
+  const componentType = column.type ? extractComponentType(column.type) : '';
+  switch (componentType) {
+    case "CONTROL": {
+      return {
+        cell: (_, rowData) => {
+          const { componentMap, formApi, config, meta } = this.formConfig;
+          return html`<clmt-control-wrapper
+            .config=${{
+              ...column,
+              label: '',
+              property: `${config.property}.${rowData.$key}.${column.property}`,
+            }}
+            .componentMap=${componentMap}
+            .meta=${meta}
+            .formController=${formApi}
+            ?hideLabel=${true}
+          ></clmt-control-wrapper>`;
+        },
+      };
+    }
+
+    default: {
+      return {
+        cell: (_, rowData) =>
+          html`${getValue(rowData, column)}`,
+      };
+    }
+  }
+}
+
+get tableData() {
+  const { formApi, config } = this.formConfig;
+  return getValueFromProp(formApi.formValues, config.property);
+}
+
+getRequired(column) {
+  if (!column?.required) {
+    return false;
+  }
+
+  return executeRuleConfig(column?.required, {
+    ...this.data,
+    meta: this.formConfig?.meta,
+  });
+}
+
+getVisible(column) {
+  if (!column?.visible) {
+    return false;
+  }
+  return executeRuleConfig(column?.visible, {
+    ...this.data,
+    meta: this.formConfig?.meta,
+  });
+}
+
+buildColumnConfig(cellRender = true) {
+  const { columns = [] } = this.template;
+  const dataColumns = columns.reduce((formatted, column, index) => {
+    const { label, property, size = 50 } = column;
+    const cellValue = cellRender
+      ? this.buildCellConfig(column)
+      : this.skipCellRender(column, index);
+    if (this.getVisible(column)) {
+      formatted.push({
+        columnStyle: `padding:8px;min-width:${size}px;`,
+        header: () =>
+          html`<clmt-field-set
+            label=${label}
+            labelSize="sm"
+            ?required=${this.getRequired(column)}
+          >
+          </clmt-field-set>`,
+        property,
+        sort: true,
+        ...cellValue,
+      });
+    }
+    return formatted;
+  }, []);
+  return dataColumns;
+}
+
+const actionColumn = {
+  property: 'action',
+  header: 'Action',
+  columnStyle: 'padding:8px;',
+  cell: (_, rowData) => {
+    const data = {
+      selectAll: false,
+      selectedData: [{ index: rowData.$key, data: rowData }],
+    };
+    return this.actionProvider('isRow', data);
+  },
+};
+
+return this.getFilteredActions('isRow').length
+  ? [...dataColumns, { ...actionColumn }]
+  : dataColumns;
+
+getFilteredActions = (actionType) => {
+  const { actions = [] } = this.template;
+  return Array.isArray(actions)
+    ? actions.filter(({ [actionType]: isValid }) => isValid)
+    : [];
+};
+
+actionProvider = (actionType, rowData) => {
+  const { selectedData = [] } = rowData;
+  const currentRowId = selectedData[0]?.index;
+  let RowActionEnabler = {};
+
+  if (actionType === 'isBulk') {
+    this._actionEnabler(selectedData[0]?.data, (arg) => {
+
+return filteredActions.length
+  ? html`<div style="display:flex; gap:8px">
+      ${filteredActions.map(
+        ({ label, displayInfo, actionName, toggleLabel }) => {
+          const { icon, color, variant } = displayInfo || {};
+          return html`${icon && variant === VARIANT.ICONCTA
+            ? html`<sc-icon-button
+                type="${color || 'default'}"
+                size="lg"
+                name="${this.actionLoader[actionName] ? '' : icon}"
+                no-border=""
+                ?loading=${this.actionLoader[actionName]}
+                @click=${() => {
+                  this.actionHandler(
+                    { rowData, actionName },
+                    (arg = {}) => {
+                      this.actionLoader = arg;
+                    }
+                  );
+                }}
+                ?disabled=${isDisabled(actionName) ||
+                this.actionLoader[actionName]}
+              ></sc-icon-button>`
+            : html`<sc-button
+                size="sm"
+                ?fill=${variant === VARIANT.CONTAINED}
+                type="${color || 'default'}
+
+this.toggleAction.enabled = true;
+}
+}
+}
+?disabled=${isDisabled(actionName) ||
+  this.actionLoader[actionName]}
+>
+  ${
+    currentRowId === this.toggleAction.rowId &&
+    this.toggleAction.enabled
+      ? toggleLabel
+      : label
+  }
+</sc-button>
+`;
+}
+</div>`
+: html`<div></div>`;
+}
+
+get columnChooser() {
+  return (
+    this.getFilteredActions('isBulk').length ||
+    this.getFilteredActions('isFooter').length
+  );
+}
+
+skipCellRender(column, index) {
+  if (this.isExpandable && this.renderParentRow) {
+    const colWidth = column.size || 50;
+    return {
+      columnStyle: `padding:8px;min-width:${colWidth}px;`,
+      cell: (_, rowData) => {
+        if (index === 0) return this.renderParentRow(rowData);
+        return null;
+      },
+    };
+  }
+
+  return this.buildCellConfig(column);
+}
+
+renderNoData() {
+  return html`<div>
+    <sc-icon-card
+  mode="${this.noData?.icon ? 'icon' : 'nothing'}"
+  icon="${this.noData?.icon || 'nothing'}"
+  icon-size="${this.noData?.iconSize || 'xl'}"
+  body-size="${this.noData?.bodySize || 'md'}"
+  image-align="center"
+  text-align="center"
+  size="full"
+  space-size="lg"
+  no-border=""
+>
+  <div slot="body">
+    ${this.noData?.message || 'No records to display'}
+  </div>
+</sc-icon-card>
+</div>`;
+
+nestedRowExpandRender(data) {
+  if (this.rowExpandRender) return this.rowExpandRender(data);
+
+  const childRows = [] = data;
+
+  return html`<div style="padding-left:40px">
+    ${childRows.length
+      ? html`<sc-table
+          class="nested-table"
+          ?column-chooser=${this.columnChooser}
+          .conf=${this.buildColumnConfig()}
+          .data=${childRows}
+        ></sc-table>`
+      : html`${this.renderNoData()}`}
+  </div>`;
+}
+
+nestedRowExpandable(data) {
+  if (this.rowExpandable) return this.rowExpandable(data);
+  return 1; // Default collapse all, 0 - non-expandable, 2 - to expand
+}
+
+async nestedRowCreate({ detail: { tr } }) {
+  if (this.isExpandable && this.renderParentRow) {
+    const colIndex = this.columnChooser ? 2 : 1;
+    // Implementation logic goes here
+  }
+if (tr.children.length) {
+  if (this.columnChooser) {
+    await this.updateComplete;
+    tr.children[1].style.display = 'none';
+  }
+
+  await this.updateComplete;
+  tr.children[colIndex].setAttribute('colspan', tr.children.length);
+  for (const index in tr.children) {
+    if (index > colIndex) {
+      await this.updateComplete;
+      tr.children[index].style.display = 'none';
+    }
+  }
+}
+
+const trSlot = tr.parentNode.querySelectorAll('.expansive-slot-container');
+for (tr of trSlot) {
+  tr
+    .querySelector('.nested-table')
+    .renderRoot.querySelector('thead').style.visibility = 'collapse';
+}
+
+render() {
+  return html`
+    ${this.noData?.hideTable && !this.tableData.length
+      ? nothing
+      : html`
+          <sc-table
+            .data=${this.tableData}
+            .conf=${this.buildColumnConfig(false)}
+            @sc-select=${(e) => { this.selectedRows = event.detail; }}
+            @sc-tr-create=${this.nestedRowCreate}
+            ?column-chooser=${this.columnChooser}
+            ?expandable=${this.isExpandable}
+            ?rowExpandable=${(data) => this.nestedRowExpandable(data)}
+            .rowExpandRender=${(data) => this.nestedRowExpandRender(data)}
+            sort="test_asc"
+            @sc-sort=${(e) => console.log(e)}
+          >
+          </sc-table>
+        `}
+    ${this.tableData.length
+      ? html`<div></div>`
+      : nothing}
+  `;
+}
+
+class="d-flex align-items-center justify-content-between ${this.paginationConfig ? 'py-3' : ''}">
+
+<div style="display:flex; gap:8px">
+  ${this.actionProvider('isFooter', this.selectedRows)}
+  ${this.actionProvider('isBulk', this.selectedRows)}
+</div>
+
+${this.paginationConfig
+  ? html`<sc-pagination
+      total=${this.totalCount}
+      total-pages="0"
+      current-page=${this.paginationConfig.page}
+      page-size=${this.paginationConfig.pageSize}
+      @sc-change=${async (event) => {
+        const { page, pageSize } = event.detail;
+        await this.updateComplete;
+        this.emit('onPageChange', {
+          data: { page, pageSize },
+        });
+      }}
+    ></sc-pagination>`
+  : null}
+
+${this.renderNoData()}
+${this.actionProvider('isFooter', this.selectedRows)}
