@@ -1,0 +1,33 @@
+const resetFormToDefaults = (defaultValues = {}) => (state, { setIn }) => {
+  const { fields } = state;
+
+  // Reset form state
+  state.formState = {
+    ...state.formState,
+    submitFailed: false,
+    submitting: false,
+    pristine: true,
+    valid: true,
+    validating: false,
+    submitSucceeded: false,
+    lastSubmittedValues: undefined,
+    error: undefined,
+    errors: {},
+  };
+
+  // Reset each field to the provided default values or an empty string
+  Object.keys(fields).forEach((fieldName) => {
+    const field = fields[fieldName];
+    if (field) {
+      fields[fieldName] = {
+        ...field,
+        value: defaultValues[fieldName] || "", // Use defaultValue if provided, else reset to ""
+        touched: false,
+        dirty: false,
+        error: undefined,
+        submitError: undefined,
+        active: false,
+      };
+    }
+  });
+};
