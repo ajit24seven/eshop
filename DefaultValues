@@ -31,3 +31,174 @@ const resetFormToDefaults = (defaultValues = {}) => (state, { setIn }) => {
     }
   });
 };
+
+
+
+
+
+
+const resetFormToDefaults = (defaultValues = {}) => (state, { setIn }) => {
+  const { fields } = state;
+
+  // Reset the overall form state
+  state.formState = {
+    ...state.formState,
+    pristine: true,
+    valid: true,
+    submitting: false,
+    submitFailed: false,
+    submitSucceeded: false,
+    validating: false,
+    error: undefined,
+    errors: {},
+    lastSubmittedValues: undefined,
+    values: { ...defaultValues }, // Override with defaultValues
+  };
+
+  // Reset each field's state
+  Object.keys(fields).forEach((fieldName) => {
+    const field = fields[fieldName];
+    if (field) {
+      fields[fieldName] = {
+        ...field,
+        value: defaultValues[fieldName] || "", // Use default value or empty
+        touched: false,
+        dirty: false,
+        error: undefined,
+        submitError: undefined,
+        active: false,
+      };
+    }
+  });
+};
+
+
+≈======
+
+const clearForm = () => (state) => {
+  const { fields } = state;
+
+  // Clear all field values and reset field state
+  Object.keys(fields).forEach((fieldName) => {
+    const field = fields[fieldName];
+    if (field) {
+      fields[fieldName] = {
+        ...field,
+        value: "", // Reset the value to an empty string
+        touched: false, // Mark as not touched
+        dirty: false, // Mark as pristine
+        error: undefined, // Clear errors
+        submitError: undefined, // Clear submit-specific errors
+        active: false, // Mark field as inactive
+      };
+    }
+  });
+
+  // Reset the entire form state
+  state.formState = {
+    ...state.formState,
+    values: {}, // Clear all form values
+    pristine: true, // Mark form as pristine
+    valid: true, // Reset form validation
+    submitFailed: false, // Clear submit failure flag
+    submitSucceeded: false, // Clear submit success flag
+    submitting: false, // Ensure form is not in a submitting state
+    validating: false, // Clear any ongoing validation
+    error: undefined, // Clear global errors
+    errors: {}, // Clear field-specific errors
+    lastSubmittedValues: undefined, // Remove any last submitted values
+  };
+};
+
+
+====
+
+const clearForm = () => (state) => {
+  const { fields } = state;
+
+  // Clear all field values and reset field state
+  Object.keys(fields).forEach((fieldName) => {
+    const field = fields[fieldName];
+    if (field) {
+      fields[fieldName] = {
+        ...field,
+        value: "", // Reset the value to an empty string
+        touched: false, // Mark as not touched
+        dirty: false, // Mark as pristine
+        error: undefined, // Clear errors
+        submitError: undefined, // Clear submit-specific errors
+        active: false, // Mark field as inactive
+      };
+    }
+  });
+
+  // Reset the entire form state
+  state.formState = {
+    ...state.formState,
+    values: {}, // Clear all form values
+    pristine: true, // Mark form as pristine
+    valid: true, // Reset form validation
+    submitFailed: false, // Clear submit failure flag
+    submitSucceeded: false, // Clear submit success flag
+    submitting: false, // Ensure form is not in a submitting state
+    validating: false, // Clear any ongoing validation
+    error: undefined, // Clear global errors
+    errors: {}, // Clear field-specific errors
+    lastSubmittedValues: undefined, // Remove any last submitted values
+  };
+};
+
+==///
+
+const resetFieldToDefault = (fieldName) => (state) => {
+  const { fields, formState, initialValues } = state;
+
+  // Get the default value for the field from initialValues
+  const defaultValue = initialValues[fieldName];
+
+  // Only reset if the field exists and the initial value is defined
+  const field = fields[fieldName];
+  if (field && defaultValue !== undefined) {
+    fields[fieldName] = {
+      ...field,
+      value: defaultValue, // Reset field value to its initial value
+      touched: false,       // Mark as untouched
+      dirty: false,         // Mark as pristine
+      error: undefined,     // Clear field errors
+      submitError: undefined, // Clear submit-specific errors
+      active: false,        // Deactivate the field
+    };
+  }
+
+  // Update formState values to reflect the reset default value
+  state.formState.values = {
+    ...formState.values,
+    [fieldName]: defaultValue, // Set the field's value to the initial value
+  };
+};
+
+=====
+
+const revalidateField = (fieldName) => {
+  form.validate().then((errors) => {
+    // Check if there's an error for the specific field
+    const fieldError = errors[fieldName];
+
+    if (fieldError) {
+      // Update the field's error if validation failed
+      form.change(fieldName, form.getState().values[fieldName]); // Re-trigger the field's value if necessary
+      form.mutators.resetFieldErrors(fieldName, fieldError);  // Set field error (can be customized to set error state)
+      console.log(`Validation error for ${fieldName}: ${fieldError}`);
+    } else {
+      // Clear any existing error for the field
+      form.mutators.resetFieldErrors(fieldName, undefined);
+      console.log(`${fieldName} is valid.`);
+    }
+  });
+};
+
+
+===÷
+
+
+
