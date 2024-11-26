@@ -1,0 +1,26 @@
+/**
+ * Force re-render of a specific field using resetFieldState
+ * @param {Object} formApi - The Final Form API instance
+ * @param {string} fieldName - The name of the field to re-render
+ */
+function rerenderFieldWithResetState(formApi, fieldName) {
+  if (!formApi || !fieldName) {
+    console.error("Form API or field name is missing!");
+    return;
+  }
+
+  if (typeof formApi.resetFieldState !== "function") {
+    console.error("The 'resetFieldState' method is not available in formApi.");
+    return;
+  }
+
+  const fieldState = formApi.getFieldState(fieldName);
+
+  if (!fieldState) {
+    console.error(`Field "${fieldName}" does not exist.`);
+    return;
+  }
+
+  // Use resetFieldState to clear and trigger a re-render
+  formApi.resetFieldState(fieldName);
+}
