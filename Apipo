@@ -1,0 +1,68 @@
+export const documentUploadQuery = async (
+  apiCtrl: any,
+  payloads: any[],
+  config: any
+) => {
+  const poolManager = new ApiPoolManager(3);
+  let isRetry = false;
+
+  // Function to show alerts
+  const showUploadErrorAlert = (key: string, uploadDoc: Function) => {
+    showAlert({
+      key,
+      duration: "Infinity",
+      closable: true,
+      type: "error",
+      message: html`<div>File upload failed</div>
+        <sc-button
+          type="default"
+          size="xxs"
+          @click-${(e: any) => {
+            isRetry = true;
+            e.stopPropagation();
+            hideAlert(key);
+            uploadDoc();
+          }}
+        >
+          Try Again
+        </sc-button>`,
+    });
+  };
+
+  // Function to upload a document
+  const uploadDoc = async (payload: any) => {
+    try {
+      const res = await apiCtrl.query({
+        url: "document/v2/upload/KXY",
+        method: "POST",
+        body: payload,
+      });
+
+      showAlert({
+        message: html`<div>${res.response.data} uploaded successfully</div>`,
+      });
+
+      if (isRetry) {
+        config.reload();
+      }
+
+      return res;
+    } catch (error) {
+      const key = generateRandomId();
+      showUploadErrorAlert(key, () => uploadDoc(payload));
+
+      if (isRetry) {
+        throw error; // Rethrow the error if retry fails
+      }
+    }
+  };
+
+  try {
+    return Promise.allSettled(
+      payloads.map((payload) => poolManager.add(() => uploadDoc(payload)))
+    );
+  } catch (error) {
+    console.error("Unhandled error during document upload:", error);
+    throw error; // Rethrow the error for higher-level handling
+  }
+};
