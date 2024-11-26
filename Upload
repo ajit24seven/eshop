@@ -1,0 +1,225 @@
+// @ts-ignore
+import { ModalBase } from './components/modal/modal-base';
+import { ApiRestController } from '../controllers/api-rest-controller/api-rest-controller';
+import { PageBase } from '../shared/PageBase';
+import { customElement, property, state } from 'lit/decorators.js';
+import { DocumentUploadTemplate, TOTAL_FILE_SIZE } from './config';
+import { ModalFooter } from './components/modal/modal-footer';
+import { documentUploadQuery } from './api';
+import { documentMap } from './components/field-components/component-map';
+import { ACCEPTED_FILE_TYPE, ALLOWED_FILE_SIZE, DEFAULT_DATE_FORMAT } from '../constants/common';
+import { entityInfoStore } from '../views/entity-information/entity-info.store';
+import { days } from '../utils/days';
+import { FormTable } from '../components/field-components/form-table';
+import { executeRuleConfig } from '@cint/utils';
+
+@customElement('xyz-document-upload')
+export class DocumentUpload extends ModalBase {
+    static styles = [PageBase.styles];
+    private api = new ApiRestController(this);
+
+    @property({ attribute: false })
+    config: any;
+
+    @state()
+    fileList: IData[] = [];
+
+    @state()
+    watchlistDetailPayload = {};
+
+    @state()
+    pending = false;
+
+    @state()
+    error: any;
+
+    @state()
+    emptyError: boolean;
+
+    @state()
+    validationError: string;
+
+    @state()
+    form: any;
+@state()
+isRetry: boolean = false;
+
+@state()
+value = [];
+
+get inputFile() {
+    return this.renderRoot?.querySelector('#input-init-value') ?? null;
+}
+
+get fieldState() {
+    return this.form?.getFieldState('documentUpload');
+}
+
+modalContent() {
+    return html`
+        ${this.renderControl()}
+        ${this.renderScreen()}
+    `;
+}
+
+modalFooter() {
+    return html`
+        <xyz-modal-footer
+            .config=${{
+                name: 'Upload',
+                action: () => this.form.submit(),
+                fill: true,
+                icon: this.pending ? 'loading' : 'upload',
+                isLoading: this.pending,
+                disabled: !this.fieldState?.value?.length || this.validationError,
+            }}
+        ></xyz-modal-footer>
+    `;
+}
+
+renderControl() {
+    return html`
+        <div class="mb-3">
+            You can upload more than 1 file.
+        </div>
+
+        <sc-file-input
+            id="input-init-value"
+            label="Document(s)"
+            label-size="xs"
+            placeholder="Click or drop file here"
+            width="100%"
+            icon-size="lg"
+            max-size="${ALLOWED_FILE_SIZE}"
+            multiple
+            error-message="${this.validationError}"
+        
+
+  accept="${ACCEPTED_FILE_TYPE}"
+  success-message=""
+  direction="horizontal"
+  @sc-change="${(e: any) => this.onChangeHandler(e)}"
+  .deletable=${true}
+  .value=${this.value}>
+</sc-file-input>
+
+renderScreen() {
+  return html`
+    <cmt-form-builder
+      style="display: ${this.fieldState?.value?.length ? 'none' : ''}"
+      .onSubmit=${(data: any) => this.handleSubmit(data)}
+      .onReady=${(form: any) => {
+        this.form = form;
+      }}
+      .formActionHandler=${this.formActionHandler}
+      .data=${{documentUpload: []}}
+      .componentMap=${this.componentMap}
+      .template=${this.documentUploadTemplate}
+      .ruleExecutor=${executeRuleConfig}>
+    </cmt-form-builder>
+  `;
+}
+
+onChangeHandler({ detail }: any) {
+  this.emptyError = false;
+  this.fileList = detail.value;
+  this.buildRowData();
+}
+
+fileId(file: any) {
+  return file.id + file.name;
+}
+
+buildRowData() {
+  const existingRowDataMap = this.fieldState.value.reduce((a: Map<string, any>, b: any) => {
+    a.set(this.fileId(b.docDetails), b);
+    return a;
+  }, new Map());
+
+  const documents = this.fileList.map(file => {
+    const existingRowData = existingRowDataMap.get(this.fileId(file));
+    const entityInfo = entityInfoStore.getState().getEntityInfo();
+    return existingRowData ? existingRowData : {
+      fileId: this.fileId(file),
+      fileName: file.name,
+      fileSize: Math.round(parseInt(file.size) / 1024),
+      privacyIndicator: '',
+      documentRequirement: '',
+
+documentExpiryDate: dayjs().format('YYYY-MM-DD'),
+documentCategory: '',
+documentType: '',
+caseId: entityInfo?.caseId,
+docDetails: file,
+entityId: entityInfo?.entityId || 0,
+});
+
+const emptyFile = documents.filter(doc => doc.docDetails.size === 0);
+
+if (emptyFile.length) {
+  this.setValidationError("File size must be between 1KB - 10MB");
+  return null;
+} else {
+  this.setValidationError('');
+}
+
+this.form.change('documentUpload', documents);
+if (documents.length === 0) {
+  this.emptyError = true;
+}
+
+setValidationError(msg = '') {
+  this.validationError = msg;
+}
+
+buildPayload(documentUpload = []) {
+  return documentUpload.map(({ docDetails, documentRequirement, fileId, rowId, ...rest }: any) => {
+    const formData = new FormData();
+    const docReq = documentRequirement.join(',');
+    formData.append('docDetails', docDetails);
+    formData.append('documentMetadata', JSON.stringify({ ...rest, documentRequirement: docReq }));
+    return formData;
+  });
+}
+
+handleSubmit = (data: any) => {
+  const { documentUpload } = data;
+  this.pending = true;
+  const payloads = this.buildPayload(documentUpload);
+  this.closeModal();
+
+  documentUploadQuery(this.apiCtrl, payloads, this.config).then((results) => {
+    const isSuccess = results?.some((item: any) => item.status === 'fulfilled');
+    if (isSuccess) {
+      this.config.reload();
+    }
+    this.pending = false;
+  });
+};
+
+formActionHandler({ detail }: any) {
+  const {
+    data: { rowData, actionName },
+  } = detail;
+
+  if (actionName === "deleteRow") {
+    const { selectedData } = rowData;
+    const deleteDoc = [selectedData[0].data.fileId];
+    this.updateFileList(deleteDoc);
+  }
+}
+
+updateFileList(uploadedDocs: any) {
+  const updatedList = this.fieldState.value
+    .filter((file: any) => !uploadedDocs.includes(file.fileId))
+    .map((item: any) => item.docDetails);
+
+  if (this.inputFile) {
+    // @ts-ignore
+    this.inputFile.value = updatedList;
+  }
+
+  this.fileList = [...updatedList];
+  this.buildRowData();
+}
+}
