@@ -1,0 +1,99 @@
+/**
+ * Handles the document upload process with retry logic and pooled requests.
+ * @param apiCtrl - API controller instance for making HTTP requests.
+ * @param payloads - Array of payloads to be uploaded.
+ * @param config - Additional configuration object for reload behavior.
+ * @returns A Promise resolving to the status of all uploads.
+ */
+export const documentUploadQuery = async (
+  apiCtrl: any,
+  payloads: any[],
+  config: any
+): Promise<void> => {
+  const poolManager = new ApiPoolManager(3); // Manages concurrent requests
+  let isRetry = false;
+
+  /**
+   * Displays a success message upon successful upload.
+   * @param data - The response data from the upload API.
+   */
+  const displaySuccessMessage = (data: string): void => {
+    showAlert({
+      message: html`<div>${data} uploaded successfully</div>`,
+    });
+  };
+
+  /**
+   * Displays an error alert with a retry option.
+   * @param key - Unique identifier for the alert.
+   * @param retryCallback - Function to retry the failed upload.
+   */
+  const displayErrorAlert = (key: string, retryCallback: () => void): void => {
+    showAlert({
+      key,
+      duration: "Infinity",
+      closable: true,
+      type: "error",
+      message: html`<div>File upload failed</div>
+        <sc-button
+          type="default"
+          size="xxs"
+          @click=${(event: Event) => {
+            isRetry = true;
+            event.stopPropagation();
+            hideAlert(key); // Hide the current alert
+            retryCallback(); // Retry the upload
+          }}
+        >
+          Try Again
+        </sc-button>`,
+    });
+  };
+
+  /**
+   * Handles the upload process for a single payload.
+   * @param payload - The payload to be uploaded.
+   * @returns A Promise resolving to the upload response or handling errors.
+   */
+  const uploadDocument = async (payload: any): Promise<any> => {
+    try {
+      const response = await apiCtrl.query({
+        url: "document/v2/upload/KXY",
+        method: "POST",
+        body: payload,
+      });
+
+      // Display success message
+      displaySuccessMessage(response.response.data);
+
+      // Trigger reload if this is a retry
+      if (isRetry) {
+        config.reload();
+      }
+
+      return response;
+    } catch (error) {
+      const alertKey = generateRandomId();
+
+      // Display retry alert
+      displayErrorAlert(alertKey, () => uploadDocument(payload));
+
+      if (isRetry) {
+        // If already retrying, propagate the error
+        throw error;
+      }
+    }
+  };
+
+  try {
+    // Process uploads concurrently with a pool manager
+    const results = await Promise.allSettled(
+      payloads.map((payload) => poolManager.add(() => uploadDocument(payload)))
+    );
+
+    return results;
+  } catch (error) {
+    console.error("An error occurred during the document upload process:", error);
+    throw error; // Ensure errors are propagated for higher-level handling
+  }
+};
