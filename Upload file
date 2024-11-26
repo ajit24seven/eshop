@@ -1,0 +1,284 @@
+// @ts-ignore
+import { ModalBase } from './components/modal/modal-base';
+import { ApiRestController } from '../controllers/api-rest-controller/api-rest-controller';
+import { PageBase } from '../shared/PageBase';
+import { customElement, property, state } from 'lit/decorators.js';
+import { DocumentUploadTemplate } from './config';
+import { ModalFooter } from './components/modal/modal-footer';
+import { documentUploadQuery } from './api';
+import { ACCEPTED_FILE_TYPE, ALLOWED_FILE_SIZE } from '../constants/common';
+import { entityInfoStore } from '../views/entity-information/entity-info.store';
+import { executeRuleConfig } from '@cint/utils';
+import dayjs from 'dayjs';
+
+@customElement('xyz-document-upload')
+export class DocumentUpload extends ModalBase {
+  // Static styles for the component
+  static styles = [PageBase.styles];
+
+  // Properties and state variables
+  private apiCtrl = new ApiRestController(this);
+
+  @property({ attribute: false })
+  config: any;
+
+  @state() fileList: IData[] = [];
+  @state() pending = false;
+  @state() error: any = null;
+  @state() emptyError = false;
+  @state() validationError = '';
+  @state() form: any = null;
+  @state() value = [];
+
+  /**
+   * Getter for the input file element.
+   */
+  private get inputFile(): HTMLInputElement | null {
+    return this.renderRoot?.querySelector('#input-init-value') ?? null;
+  }
+
+  /**
+   * Getter for the form's field state.
+   */
+  private get fieldState(): any {
+    return this.form?.getFieldState('documentUpload');
+  }
+
+  /**
+   * Renders the modal's content.
+   */
+  modalContent() {
+    return html`
+      ${this.renderControl()}
+      ${this.renderForm()}
+    `;
+  }
+
+  /**
+   * Renders the modal's footer.
+   */
+  modalFooter() {
+    return html`
+      <xyz-modal-footer
+        .config=${this.getFooterConfig()}
+      ></xyz-modal-footer>
+    `;
+  }
+
+  /**
+   * Configuration for the modal footer actions.
+   */
+  private getFooterConfig() {
+    return {
+      name: 'Upload',
+      action: () => this.form.submit(),
+      fill: true,
+      icon: this.pending ? 'loading' : 'upload',
+      isLoading: this.pending,
+      disabled: !this.isUploadEnabled(),
+    };
+  }
+
+  /**
+   * Checks if the upload button should be enabled.
+   */
+  private isUploadEnabled(): boolean {
+    return !!this.fieldState?.value?.length && !this.validationError;
+  }
+
+  /**
+   * Renders the file input control for uploading documents.
+   */
+  private renderControl() {
+    return html`
+      <div class="mb-3">You can upload more than 1 file.</div>
+      <sc-file-input
+        id="input-init-value"
+        label="Document(s)"
+        label-size="xs"
+        placeholder="Click or drop file here"
+        width="100%"
+        icon-size="lg"
+        max-size="${ALLOWED_FILE_SIZE}"
+        multiple
+        error-message="${this.validationError}"
+        accept="${ACCEPTED_FILE_TYPE}"
+        direction="horizontal"
+        @sc-change="${this.handleFileChange}"
+        .deletable=${true}
+        .value=${this.value}
+      ></sc-file-input>
+    `;
+  }
+
+  /**
+   * Renders the form for additional document information.
+   */
+  private renderForm() {
+    const isHidden = this.fieldState?.value?.length ? 'none' : '';
+    return html`
+      <cmt-form-builder
+        style="display: ${isHidden}"
+        .onSubmit=${this.handleSubmit}
+        .onReady=${(form: any) => (this.form = form)}
+        .formActionHandler=${this.handleFormAction}
+        .data=${{ documentUpload: [] }}
+        .componentMap=${this.getComponentMap()}
+        .template=${DocumentUploadTemplate}
+        .ruleExecutor=${executeRuleConfig}
+      ></cmt-form-builder>
+    `;
+  }
+
+  /**
+   * Handles changes in the file input.
+   */
+  private handleFileChange(event: CustomEvent) {
+    this.emptyError = false;
+    this.fileList = event.detail.value;
+    this.updateDocumentState();
+  }
+
+  /**
+   * Updates the state of uploaded documents in the form.
+   */
+  private updateDocumentState() {
+    const existingDataMap = this.mapExistingData();
+    const entityInfo = this.getEntityInfo();
+
+    const updatedFiles = this.fileList.map((file) => {
+      return existingDataMap.get(this.generateFileId(file)) || this.createFileEntry(file, entityInfo);
+    });
+
+    const isEmptyFile = updatedFiles.some((file) => file.docDetails.size === 0);
+    if (isEmptyFile) {
+      this.setValidationError('File size must be between 1KB - 10MB');
+    } else {
+      this.setValidationError('');
+      this.form.change('documentUpload', updatedFiles);
+    }
+
+    this.emptyError = updatedFiles.length === 0;
+  }
+
+  /**
+   * Maps existing uploaded files by their IDs.
+   */
+  private mapExistingData() {
+    return new Map(
+      this.fieldState?.value?.map((entry: any) => [this.generateFileId(entry.docDetails), entry]) || []
+    );
+  }
+
+  /**
+   * Generates a unique ID for a file.
+   */
+  private generateFileId(file: any): string {
+    return `${file.id}${file.name}`;
+  }
+
+  /**
+   * Retrieves entity information from the store.
+   */
+  private getEntityInfo() {
+    return entityInfoStore.getState().getEntityInfo();
+  }
+
+  /**
+   * Creates a new file entry.
+   */
+  private createFileEntry(file: any, entityInfo: any) {
+    return {
+      fileId: this.generateFileId(file),
+      fileName: file.name,
+      fileSize: Math.round(file.size / 1024),
+      privacyIndicator: '',
+      documentRequirement: '',
+      documentExpiryDate: dayjs().format('YYYY-MM-DD'),
+      documentCategory: '',
+      documentType: '',
+      caseId: entityInfo?.caseId || '',
+      docDetails: file,
+      entityId: entityInfo?.entityId || 0,
+    };
+  }
+
+  /**
+   * Sets a validation error message.
+   */
+  private setValidationError(message: string = '') {
+    this.validationError = message;
+  }
+
+  /**
+   * Handles form submission.
+   */
+  private handleSubmit = async (data: any) => {
+    try {
+      this.pending = true;
+      const payloads = this.preparePayloads(data.documentUpload);
+      this.closeModal();
+      const results = await documentUploadQuery(this.apiCtrl, payloads, this.config);
+
+      if (this.isUploadSuccessful(results)) {
+        this.config.reload();
+      }
+    } catch (error) {
+      console.error('Document upload failed:', error);
+    } finally {
+      this.pending = false;
+    }
+  };
+
+  /**
+   * Prepares payloads for document upload.
+   */
+  private preparePayloads(documentUpload: any[]) {
+    return documentUpload.map(({ docDetails, documentRequirement, ...rest }) => {
+      const formData = new FormData();
+      formData.append('docDetails', docDetails);
+      formData.append(
+        'documentMetadata',
+        JSON.stringify({ ...rest, documentRequirement: documentRequirement.join(',') })
+      );
+      return formData;
+    });
+  }
+
+  /**
+   * Checks if the upload operation was successful.
+   */
+  private isUploadSuccessful(results: any[]): boolean {
+    return results.some((result) => result.status === 'fulfilled');
+  }
+
+  /**
+   * Handles form actions like deleting rows.
+   */
+  private handleFormAction({ detail }: any) {
+    const { rowData, actionName } = detail.data;
+    if (actionName === 'deleteRow') {
+      this.removeDeletedFiles(rowData.selectedData.map((data: any) => data.fileId));
+    }
+  }
+
+  /**
+   * Removes deleted files from the file list.
+   */
+  private removeDeletedFiles(deletedFileIds: string[]) {
+    this.fileList = this.fileList.filter(
+      (file: any) => !deletedFileIds.includes(this.generateFileId(file))
+    );
+    if (this.inputFile) {
+      this.inputFile.value = this.fileList;
+    }
+    this.updateDocumentState();
+  }
+
+  /**
+   * Retrieves the component map for the form builder.
+   */
+  private getComponentMap() {
+    return {}; // Define your component map logic here
+  }
+}
