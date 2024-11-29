@@ -1,0 +1,230 @@
+import { LitElement, html, nothing, PropertyValues, css, customElement } from 'lit';
+import { property } from 'lit/decorators.js';
+import { AppContextMixin } from '../mixins/app-context';
+import { PageBase } from '../shared/PageBase';
+import { ColumnConfig, TableData, PaginationConfig, ActionLoader } from '../types';
+import { executeRuleConfig } from '../form-builder/rule-engine';
+import { getDataSourceDescription, getValue, getValueFromProp } from '../element.util';
+
+@customElement('table-builder')
+export class TableBuilder extends AppContextMixin(LitElement) {
+  static styles = [PageBase.styles];
+
+  // Using the @property decorator to define reactive properties
+  @property({ type: Array }) data: TableData[] = [];
+  @property({ type: Number }) totalCount: number = 0;
+  @property({ type: Object }) selectedRows: Record<string, any> = {};
+  @property({ type: Object }) actionLoader: ActionLoader = {};
+  @property({ type: Object }) formConfig: any = {};
+  @property({ type: Object }) noData: any = {};
+  @property({ type: Object }) expandableConfig: any = {};
+  @property({ type: Object }) paginationConfig: PaginationConfig | null = null;
+  @property({ type: Object }) toggleAction: any = { enabled: false, rowId: -1 };
+
+  private _memoizedColumnConfig: ColumnConfig[] | null = null;
+  private page: number = 1;
+  private pageSize: number = 20;
+  private isLoading: boolean = false;
+
+  constructor() {
+    super();
+  }
+
+  // Memoized column config
+  get columnConfig(): ColumnConfig[] {
+    if (this._memoizedColumnConfig) return this._memoizedColumnConfig;
+
+    const columns = this.template?.columns || [];
+    this._memoizedColumnConfig = columns
+      .filter((column) => this.isVisible(column))
+      .map((column) => ({
+        columnStyle: `padding:8px;min-width:${column.size || 50}px;`,
+        header: () => this.renderColumnHeader(column),
+        property: column.property,
+        sort: true,
+        ...this.getCellRenderer(column),
+      }));
+
+    return this._memoizedColumnConfig;
+  }
+
+  // Only trigger re-render when specific properties change
+  shouldUpdate(changedProperties: PropertyValues): boolean {
+    if (changedProperties.has('data') || changedProperties.has('paginationConfig')) {
+      return true;
+    }
+    return false;
+  }
+
+  async loadMoreRows(): Promise<void> {
+    if (this.page * this.pageSize >= this.totalCount || this.isLoading) return;
+    this.isLoading = true;
+    this.page += 1;
+
+    const newRows = await this.fetchTableData(this.page, this.pageSize);
+    this.data = [...this.data, ...newRows];
+    this.isLoading = false;
+  }
+
+  // Render the table with appropriate data
+  render() {
+    const hasData = this.tableData.length > 0;
+    return html`
+      <sc-table
+        .data=${this.tableData}
+        .conf=${this.columnConfig}
+        ?column-chooser=${this.columnChooserEnabled}
+        ?expandable=${this.isExpandable}
+        .rowExpandRender=${this.expandableConfig?.rowExpandRender}
+        @sc-select=${(e: CustomEvent) => (this.selectedRows = e.detail)}
+        @sc-tr-create=${this.expandableConfig?.nestedRowCreate}
+      >
+      </sc-table>
+
+      ${!hasData ? this.renderNoData() : this.renderFooter()}
+    `;
+  }
+
+  // Footer rendering including actions and pagination
+  renderFooter() {
+    return html`
+      <div class="d-flex align-items-center justify-content-between">
+        <div style="display:flex; gap:8px">
+          ${this.renderActions('isFooter')}
+          ${this.renderActions('isBulk')}
+        </div>
+        ${this.renderPagination()}
+      </div>
+    `;
+  }
+
+  // Render pagination if configuration is available
+  renderPagination() {
+    return this.paginationConfig
+      ? html`
+          <sc-pagination
+            total=${this.totalCount}
+            current-page=${this.paginationConfig.page}
+            page-size=${this.paginationConfig.pageSize}
+            @sc-change=${this.handlePaginationChange}
+          ></sc-pagination>
+        `
+      : nothing;
+  }
+
+  // Handle page and page size change in pagination
+  async handlePaginationChange(event: CustomEvent): Promise<void> {
+    const { page, pageSize } = event.detail;
+    this.page = page;
+    this.pageSize = pageSize;
+    await this.updateComplete; // Wait until DOM updates are complete
+    this.emit('onPageChange', { data: { page, pageSize } });
+  }
+
+  // Handle the action emit logic
+  private emit(eventName: string, detail: any, cb?: Function): void {
+    const event = new CustomEvent(eventName, {
+      detail: { ...detail, callback: cb || null },
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    this.dispatchEvent(event);
+  }
+
+  // Get the data source description, used for rendering certain columns
+  private getDataSourceDescription(dataSource: string, code: string): string {
+    const { descriptionMap } = getDataSourceDescription(dataSource);
+    return code
+      .toString()
+      .split(';')
+      .map((c) => descriptionMap.get(c.trim()) || '')
+      .join(', ');
+  }
+
+  // Get cell renderer based on column type
+  private getCellRenderer(column: ColumnConfig): { cell: Function } {
+    switch (column.type) {
+      case 'CONTROL':
+        return {
+          cell: (_, rowData: any) => this.renderControlCell(column, rowData),
+        };
+      default:
+        return {
+          cell: (_, rowData: any) => html`${getValue(rowData, column)}`,
+        };
+    }
+  }
+
+  // Render the control cell based on the column config
+  private renderControlCell(column: ColumnConfig, rowData: any) {
+    const { componentMap, formApi, config, meta } = this.formConfig;
+    return html`
+      <clmt-control-wrapper
+        .config=${{
+          ...column,
+          label: '',
+          property: `${config.property}.${rowData.$key}.${column.property}`,
+        }}
+        .componentMap=${componentMap}
+        .meta=${meta}
+        .formController=${formApi}
+        ?hideLabel=${true}
+      ></clmt-control-wrapper>
+    `;
+  }
+
+  // Render column header
+  private renderColumnHeader(column: ColumnConfig) {
+    return html`
+      <clmt-field-set label=${column.label} labelSize="sm" ?required=${this.getRequired(column)}>
+      </clmt-field-set>
+    `;
+  }
+
+  // Check if column is required based on the config
+  private getRequired(column: ColumnConfig): boolean {
+    return column.required && executeRuleConfig(column.required, { ...this.data, meta: this.formConfig?.meta });
+  }
+
+  // Check if column should be visible based on the rule
+  private isVisible(column: ColumnConfig): boolean {
+    return column.visible && executeRuleConfig(column.visible, { ...this.data, meta: this.formConfig?.meta });
+  }
+
+  // Render actions (footer or bulk)
+  private renderActions(actionType: string) {
+    const actions = this.getFilteredActions(actionType);
+    return actions.length
+      ? html`
+          <div style="display:flex; gap:8px">
+            ${actions.map(
+              ({ label, displayInfo, actionName, toggleLabel }) => html`
+                <sc-button
+                  size="sm"
+                  ?fill=${displayInfo.variant === 'contained'}
+                  type="${displayInfo.color || 'default'}"
+                  @click="${() => this.handleActionClick(actionName)}"
+                  ?loading="${this.actionLoader[actionName]}"
+                >
+                  ${toggleLabel || label}
+                </sc-button>
+              `
+            )}
+          </div>
+        `
+      : nothing;
+  }
+
+  // Get filtered actions
+  private getFilteredActions(actionType: string): any[] {
+    const actions = this.template?.actions || [];
+    return actions.filter((action) => action[actionType]);
+  }
+
+  // Handle action button click
+  private handleActionClick(actionName: string) {
+    // Your action handling logic here
+    this.actionLoader[actionName] = true;
+  }
+}
