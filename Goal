@@ -1,0 +1,63 @@
+Performance Commentary (if you lead a team, ensure that you include commentary on your performance as a People Leader)
+
+Delivery:
+- I have been working on Workbench modules for Offboarding, SDM, and TBSales.
+  - Writing code that is efficient and meets industry standards with proper unit test cases.
+  - Wrote reusable components and functionality in the current project to improve productivity.
+  - Prioritizing user stories and defects based on the discussion in sprint planning.
+  - Worked on decommissioning ECDH+ and integrating Workbench to CLM apps. Here is the following that I have taken care of:
+    - Taken care of complete UI module for SDM and Offboarding Migration.
+    - Ensured deployment of both SDM and Offboarding on the UI side.
+    - I worked on the common module for the UI migration mentioned earlier.
+    - I was responsible for integrating the migrated UI module (SDM and Offboarding) into the CLMApp application.
+    - I am currently addressing production defects for SDM and Offboarding.
+    - Started working on RWMB pages from Ember.js to React.js.
+    - Exploring new framework Joy UI and TanStack table to implement the RWMB screen for an impressive look.
+
+Vulnerability Management:
+- The vulnerabilities in SonarQube for SDM and Offboarding have been fixed.
+- Ensured that all issues reported as part of Gitleaks for all UI 12 modules were fixed before transferring to ADO.
+- Contribution to another team project:
+  - Worked on Ace Project.
+  - Helping another team member for Workbench application setup.
+
+Non-Technical Contribution:
+- Taking care of RAT and SIA evidence submission for project release processes.
+- Participating in weekend and weekday drives.
+
+Work-Life Balance:
+- Throughout the year, I made a concerted effort to manage my time effectively and efficiently while maintaining a high level of productivity. I prioritized my workload and created a schedule that allowed me to complete all my tasks on time and avoid procrastination.
+  - Have participated in all team lunches and run actively.
+  - Have always managed my work and personal life with the help of all the members' support.
+  - Participated in volunteering activity (Gift for the Visually Impaired - 4th Nov 2023).
+
+Valued Behaviour Commentary
+---------------------------
+I have been working on WorkBench modules for Offboarding, SDM, TBSales and decommissioning ECDD+ and migrating WorkBench to CLM apps.
+
+- I demonstrated a high level of productivity and achieved significant results in my work.
+- I set clear priorities and goals for myself and worked diligently to meet or exceed them, often going above and beyond to support my colleagues.
+- I believe my productivity helped to position me for future success.
+
+Involvement in Requirement Discussion:
+--------------------------------------
+- Have been actively participating in requirement gathering for all the projects and provided them my thoughts if anything required.
+- As a teammate, I have shared my knowledge to the team to help further in project understanding.
+
+Knowledge Dissemination:
+------------------------
+- Helping my co-workers develop modules in an efficient manner through guidance.
+- I am constantly reviewing the code of my coworkers.
+
+Learnings / Upskilling:
+-----------------------
+- I have completed all the mandatory risk and compliance training, including the e-learning assignments assigned to me, on or before the deadlines.
+- I have completed AWS Technical Essentials and have registered for the upcoming Azure DevOps Essentials training.
+- I continue to improve both my technical and soft skills as part of my professional development.
+- I gained knowledge of the Apache httpd configuration and applied it to the SDM and Offboarding UI deployment on Linux Server.
+- I have acquired knowledge of Zustand (State Management) and React Query and applied them to the current RMWB web methods screen to React.js project.
+- I continue to learn about the latest technology.
+
+Compliance:
+-----------
+- I have been following the company standards such as wearing ID card in office, submitting timesheet on time, project schedule etc.
