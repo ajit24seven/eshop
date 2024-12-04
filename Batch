@@ -1,0 +1,41 @@
+describe('form.batch', () => {
+  it('should batch updates and notify listeners only once', () => {
+    // Mock listener function to observe notifications
+    const mockListener = jest.fn();
+
+    // Mock implementation of a form object
+    const form = {
+      listeners: [mockListener],
+      change: jest.fn(),
+      notifyListeners: function () {
+        this.listeners.forEach((listener) => listener());
+      },
+      batch: function (fn) {
+        const originalNotifyListeners = this.notifyListeners;
+        // Override notifyListeners to prevent notification during batch
+        this.notifyListeners = jest.fn();
+        try {
+          fn(); // Run the provided batch function
+        } finally {
+          // Restore notifyListeners and notify all listeners at the end
+          this.notifyListeners = originalNotifyListeners;
+          this.notifyListeners();
+        }
+      }
+    };
+
+    // Perform batched updates
+    form.batch(() => {
+      form.change('firstName', 'Erik');
+      form.change('lastName', 'Rasmussen');
+    });
+
+    // Ensure form.change is called twice for updates
+    expect(form.change).toHaveBeenCalledTimes(2);
+    expect(form.change).toHaveBeenCalledWith('firstName', 'Erik');
+    expect(form.change).toHaveBeenCalledWith('lastName', 'Rasmussen');
+
+    // Ensure listeners are notified only once
+    expect(mockListener).toHaveBeenCalledTimes(1);
+  });
+});
