@@ -1,0 +1,64 @@
+Delivery Contributions
+I have made significant contributions across various modules and projects, including Clmt KYX, Document Checklist, Offboarding, SDM, and TBSales, focusing on delivering efficient, industry-standard code and implementing robust unit tests.
+
+Project Highlights
+SDM Application (React) | January - June
+1. Successfully met challenging deadlines, often working 12+ hours daily, including weekends, to ensure timely project delivery.
+2. Prioritized user stories and defect resolutions during sprint planning, enabling effective delivery.
+3. Led a complete technology migration from Ember.js to React, building the project entirely from scratch.
+4. Independently introduced the Material React Table library, which was highly appreciated by team architects.
+5. Quickly learned and implemented React Form Hooks, seamlessly integrating them with the MRI table within a tight timeline.
+6. Efficiently addressed production defects for SDM, ensuring minimal impact.
+7. Earned recognition from Kalees, Syed, Abdul, Kavitha, and others for outstanding support throughout the project.
+
+SDM and Offboarding Applications | January - Present
+Migration and Integration:
+    * Led the UI migration of SDM and Offboarding to CLM applications, ensuring seamless integration and deployment.
+    * Streamlined UI migration by developing common modules.
+    * Addressed production defects promptly for SDM and Offboarding.
+    * Transitioned RWMB pages from Ember.js to React.js, leveraging Joy UI and TanStack Table for enhanced UI/UX.
+
+Document Checklist | May - August
+1. Learned and adopted Lit JS, a framework completely new to me, and began creating functional screens within a month.
+2. Developed reusable components and features to enhance team productivity.
+3. Provided consistent support to the team, ensuring smooth project progression.
+
+KYX Application (Lit JS) | August - Present
+1. Built reusable components that formed the foundation of the application’s UI.
+2. Prioritized user stories and defect resolutions during sprint planning to meet deadlines.
+3. Designed and developed a Form Builder from scratch, overcoming challenges with limited documentation and resources.
+4. Delivered all UI requirements on schedule, addressing development obstacles efficiently.
+5. Recognized by Kalees, Syed, and Surendra for providing exceptional project support.
+
+Vulnerability Management
+1. Resolved SonarQube vulnerabilities for SDM and Offboarding applications.
+2. Addressed Gitleaks issues across all 12 UI modules prior to migration to ADO.
+3. Contributed to the Ace Project and assisted team members in setting up Workbench applications.
+
+Non-Technical Contributions
+Project Compliance
+* Managed RAT and SIA evidence submissions for project releases.
+* Supported organizational initiatives through weekday and weekend drives.
+Work-Life Balance
+* Maintained high productivity while ensuring personal well-being.
+* Actively participated in team-building activities and volunteering events, including the Blood Donation event (November 4, 2024).
+Valued Behaviors
+* Delivered meaningful results across all assigned tasks through exceptional productivity.
+* Set clear priorities and goals, often exceeding expectations to support team success.
+* Fostered a collaborative work environment by helping teammates and promoting a positive team spirit.
+
+Additional Contributions
+Requirement Discussions
+* Actively participated in requirement gathering, providing valuable insights.
+* Shared domain knowledge with the team, enhancing overall understanding.
+Knowledge Dissemination
+* Guided colleagues in efficient module development and regularly reviewed peers' code to uphold quality standards.
+
+Learnings and Upskilling
+1. Completed mandatory Risk and Compliance training and AWS Technical Essentials; registered for Azure DevOps Essentials.
+2. Enhanced skills in Apache HTTPD configuration for UI deployment on Linux Servers.
+3. Gained expertise in Zustand (State Management) and React Query, applying them effectively in RWMB screen migrations.
+4. Continuously updated technical and soft skills to stay aligned with emerging industry trends.
+
+Compliance
+* Consistently adhered to company policies, including wearing ID cards, timely submission of timesheets, and meeting project schedules.
