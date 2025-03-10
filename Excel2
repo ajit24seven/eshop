@@ -1,31 +1,260 @@
-Got it! Let's refine the implementation exactly to your needs. Can you clarify:
+Here’s the updated Excel-like filtering system using Lit.js + Zustand, supporting:
 
-1️⃣ Which filter types should be supported?
-
-Multi-Select
-
-Text Search
-
-Numeric Range
-
-Date Range
-
-Others?
+✅ Single Select (Dropdown for selecting one value)
+✅ Multi-Select (Dropdown for selecting multiple values)
+✅ Text Field (For free-text search)
+✅ Radio Button (For selecting one option from predefined choices)
 
 
-2️⃣ How should filtering behavior work?
+---
 
-Should multiple filters apply at the same time?
+🛠 Step 1: Zustand Store (tableStore.js)
 
-Should filters reset automatically when another column is filtered?
+Manages the table data, filters, and updates dynamically.
+
+import { create } from "zustand";
+
+export const useTableStore = create((set, get) => ({
+  data: [], // Original dataset
+  filteredData: [],
+  selectedFilters: {}, // Stores dynamic filters
+
+  // Initialize dataset and set default filters
+  setData: (newData) => {
+    const columnKeys = Object.keys(newData[0] || {});
+    const initialFilters = columnKeys.reduce((acc, key) => ({ ...acc, [key]: null }), {});
+    set({ data: newData, filteredData: newData, selectedFilters: initialFilters });
+  },
+
+  // Apply filters dynamically based on type
+  applyFilters: (columnKey, filterValue) => {
+    const updatedFilters = { ...get().selectedFilters, [columnKey]: filterValue };
+
+    const filteredData = get().data.filter((row) =>
+      Object.entries(updatedFilters).every(([key, value]) => {
+        if (!value || value.length === 0) return true;
+
+        const cellValue = row[key];
+
+        if (Array.isArray(value)) return value.includes(String(cellValue)); // Multi-select
+        if (typeof value === "object" && value.type === "radio") return cellValue === value.value; // Radio
+        return String(cellValue).toLowerCase().includes(String(value).toLowerCase()); // Text search & Single Select
+      })
+    );
+
+    set({ selectedFilters: updatedFilters, filteredData });
+  },
+
+  // Reset filters
+  resetFilters: () => {
+    const columnKeys = Object.keys(get().data[0] || {});
+    const resetFilters = columnKeys.reduce((acc, key) => ({ ...acc, [key]: null }), {});
+    set({ selectedFilters: resetFilters, filteredData: get().data });
+  },
+}));
 
 
-3️⃣ Should the UI mimic Excel exactly?
+---
 
-Should dropdowns look like Excel's popups?
+📌 Step 2: Lit.js Component (excel-filter-table.js)
 
-Should each column have its own filter button?
+This fully reusable Web Component auto-detects column types and applies filters dynamically.
+
+import { LitElement, html, css } from "lit";
+import { state, property } from "lit/decorators.js";
+import { useTableStore } from "./tableStore.js";
+
+class ExcelFilterTable extends LitElement {
+  static styles = css`
+    .filters {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    select, input {
+      padding: 5px;
+      width: 180px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f4f4f4;
+    }
+    button {
+      padding: 6px 10px;
+      cursor: pointer;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .radio-group {
+      display: flex;
+      gap: 10px;
+    }
+  `;
+
+  @property({ type: Array }) data = [];
+  @state() filteredData = [];
+  @state() selectedFilters = {};
+  @state() columnKeys = [];
+  @state() columnTypes = {}; // Stores column data types
+
+  constructor() {
+    super();
+    this.unsubscribe = null;
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.unsubscribe = useTableStore.subscribe((state) => {
+      this.filteredData = state.filteredData;
+      this.selectedFilters = state.selectedFilters;
+      this.requestUpdate();
+    });
+
+    if (this.data.length) {
+      useTableStore.getState().setData(this.data);
+      this.columnKeys = Object.keys(this.data[0]); // Detect columns
+      this.columnTypes = this.detectColumnTypes(this.data);
+    }
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this.unsubscribe) this.unsubscribe();
+  }
+
+  // Detects column data types (single-select, multi-select, text, radio)
+  detectColumnTypes(data) {
+    const types = {};
+    this.columnKeys.forEach((key) => {
+      const values = data.map((row) => row[key]);
+      if (new Set(values).size <= 5) types[key] = "select"; // Single select
+      else if (new Set(values).size <= 10) types[key] = "multi-select"; // Multi-select
+      else if (["yes", "no", "active", "inactive"].some((v) => values.includes(v.toLowerCase())))
+        types[key] = "radio"; // Radio for Yes/No, Active/Inactive
+      else types[key] = "text"; // Default to text search
+    });
+    return types;
+  }
+
+  // Handle filter changes
+  handleFilterChange(event, columnKey) {
+    const type = this.columnTypes[columnKey];
+    let value = event.target.value;
+
+    if (type === "multi-select") {
+      value = Array.from(event.target.selectedOptions, (opt) => opt.value);
+    } else if (type === "radio") {
+      value = { type: "radio", value };
+    }
+
+    useTableStore.getState().applyFilters(columnKey, value);
+  }
+
+  resetFilters() {
+    useTableStore.getState().resetFilters();
+  }
+
+  render() {
+    return html`
+      <div class="filters">
+        ${this.columnKeys.map((columnKey) => {
+          const type = this.columnTypes[columnKey];
+
+          return html`
+            ${type === "select"
+              ? html`
+                  <select @change=${(e) => this.handleFilterChange(e, columnKey)}>
+                    <option value="">Select ${columnKey}</option>
+                    ${[...new Set(this.data.map((row) => String(row[columnKey])))]
+                      .sort()
+                      .map(
+                        (value) =>
+                          html`<option value=${value} ?selected=${this.selectedFilters[columnKey] === value}>
+                            ${value}
+                          </option>`
+                      )}
+                  </select>
+                `
+              : type === "multi-select"
+              ? html`
+                  <select @change=${(e) => this.handleFilterChange(e, columnKey)} multiple>
+                    ${[...new Set(this.data.map((row) => String(row[columnKey])))]
+                      .sort()
+                      .map(
+                        (value) =>
+                          html`<option value=${value} ?selected=${this.selectedFilters[columnKey]?.includes(value)}>
+                            ${value}
+                          </option>`
+                      )}
+                  </select>
+                `
+              : type === "radio"
+              ? html`
+                  <div class="radio-group">
+                    ${["Yes", "No"].map(
+                      (value) => html`
+                        <label>
+                          <input
+                            type="radio"
+                            name=${columnKey}
+                            value=${value}
+                            @change=${(e) => this.handleFilterChange(e, columnKey)}
+                          />
+                          ${value}
+                        </label>
+                      `
+                    )}
+                  </div>
+                `
+              : html`
+                  <input
+                    type="text"
+                    placeholder="Search ${columnKey}"
+                    @input=${(e) => this.handleFilterChange(e, columnKey)}
+                  />
+                `}
+          `;
+        })}
+        <button @click=${this.resetFilters}>Reset Filters</button>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            ${this.columnKeys.map((key) => html`<th>${key}</th>`)}
+          </tr>
+        </thead>
+        <tbody>
+          ${this.filteredData.map(
+            (row) => html`
+              <tr>
+                ${this.columnKeys.map((key) => html`<td>${row[key]}</td>`)}
+              </tr>
+            `
+          )}
+        </tbody>
+      </table>
+    `;
+  }
+}
+
+customElements.define("excel-filter-table", ExcelFilterTable);
 
 
-Once I get these details, I’ll provide a perfectly tailored solution for you! 🚀
+---
+
+🔥 Now, you have a fully dynamic and reusable Excel-like table filter that works with single select, multi-select, text input, and radio buttons! 🚀
 
