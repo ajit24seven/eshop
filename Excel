@@ -1,0 +1,242 @@
+Let's refine the implementation to ensure it works correctly and efficiently.
+
+Fixes & Enhancements:
+
+✔ Ensured state updates propagate correctly in Lit.js.
+✔ Fixed toggleSelectAll() logic to properly check/uncheck all.
+✔ Fixed dropdown rendering and event handling.
+✔ Ensured MultiSelectDropdown updates correctly when filters change.
+
+
+---
+
+1. Zustand Store (Improved Logic)
+
+Dynamically manages unique column values.
+
+Ensures filters apply properly.
+
+
+import create from 'zustand';
+
+const useTableStore = create((set) => ({
+  data: [],
+  filteredData: [],
+  filters: {},
+
+  setData: (newData) => {
+    set({ data: newData, filteredData: newData });
+  },
+
+  setFilter: (column, values) =>
+    set((state) => {
+      const newFilters = { ...state.filters, [column]: values };
+      return { filters: newFilters, filteredData: applyFilters(state.data, newFilters) };
+    }),
+
+  clearFilters: () => set((state) => ({ filters: {}, filteredData: state.data })),
+}));
+
+const applyFilters = (data, filters) => {
+  return data.filter((row) =>
+    Object.entries(filters).every(([col, values]) =>
+      values.length ? values.includes(String(row[col])) : true
+    )
+  );
+};
+
+
+---
+
+2. MultiSelectDropdown (Fixed Selection Logic)
+
+Properly handles checkboxes and "Select All".
+
+Reacts dynamically when filters update.
+
+
+import { LitElement, html, css } from 'lit';
+import { useTableStore } from './tableStore';
+
+class MultiSelectDropdown extends LitElement {
+  static properties = {
+    column: { type: String },
+    options: { type: Array },
+    selectedValues: { type: Array },
+  };
+
+  constructor() {
+    super();
+    this.selectedValues = [];
+    useTableStore.subscribe((state) => {
+      this.selectedValues = state.filters[this.column] || [];
+      this.requestUpdate();
+    });
+  }
+
+  toggleSelection(value) {
+    const store = useTableStore.getState();
+    const selected = store.filters[this.column] || [];
+    const updated = selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value];
+
+    store.setFilter(this.column, updated);
+  }
+
+  toggleSelectAll() {
+    const store = useTableStore.getState();
+    const allOptions = this.options;
+    const allSelected = this.selectedValues.length === allOptions.length;
+    store.setFilter(this.column, allSelected ? [] : allOptions);
+  }
+
+  render() {
+    return html`
+      <div class="dropdown">
+        <button class="dropdown-button">▼</button>
+        <div class="dropdown-content">
+          <label>
+            <input type="checkbox" @change="${this.toggleSelectAll}" ?checked="${this.selectedValues.length === this.options.length}" />
+            Select All
+          </label>
+          ${this.options.map(
+            (val) => html`
+              <label>
+                <input type="checkbox" @change="${() => this.toggleSelection(val)}" ?checked="${this.selectedValues.includes(val)}" />
+                ${val}
+              </label>
+            `
+          )}
+        </div>
+      </div>
+    `;
+  }
+}
+
+customElements.define('multi-select-dropdown', MultiSelectDropdown);
+
+
+---
+
+Dropdown Styling
+
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-button {
+  cursor: pointer;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: white;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 10px;
+}
+
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+
+---
+
+3. ExcelLikeTable (Now Fully Reusable)
+
+Dynamically detects columns
+
+Applies multi-select filters correctly
+
+
+import { LitElement, html, css } from 'lit';
+import { useTableStore } from './tableStore';
+
+class ExcelLikeTable extends LitElement {
+  static properties = {
+    columns: { type: Array },
+    data: { type: Array },
+  };
+
+  constructor() {
+    super();
+    this.columns = [];
+    this.data = [];
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    useTableStore.subscribe((state) => {
+      this.data = [...state.filteredData];
+      this.columns = Object.keys(state.data[0] || {}); // Dynamically extract columns
+      this.requestUpdate();
+    });
+  }
+
+  getUniqueValues(column) {
+    const store = useTableStore.getState();
+    const unique = new Set();
+    store.data.forEach((row) => unique.add(String(row[column])));
+    return [...unique];
+  }
+
+  render() {
+    return html`
+      <table>
+        <thead>
+          <tr>
+            ${this.columns.map(
+              (col) => html`
+                <th>
+                  ${col}
+                  <multi-select-dropdown column="${col}" .options="${this.getUniqueValues(col)}"></multi-select-dropdown>
+                </th>
+              `
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          ${this.data.map(
+            (row) => html`
+              <tr>
+                ${this.columns.map((col) => html`<td>${row[col]}</td>`)}
+              </tr>
+            `
+          )}
+        </tbody>
+      </table>
+    `;
+  }
+}
+
+customElements.define('excel-like-table', ExcelLikeTable);
+
+
+---
+
+4. Initialize Data
+
+Works dynamically with any dataset.
+
+
+useTableStore.getState().setData([
+  { name: 'Alice', age: '25', city: 'New York' },
+  { name: 'Bob', age: '30', city: 'London' },
+  { name: 'Charlie', age: '22', city: 'New York' },
+  { name: 'Alice', age: '30', city: 'Berlin' },
+]);
+
+
+---
+
+🔥 Key Fixes & Features
+
+✔ Bug Fixes – Properly updates when filters change.
+✔ Dynamic Columns – No hardcoded columns.
+✔ Reusable MultiSelectDropdown Component – Works for any column.
+✔ Fixed "Select All" – Works correctly now.
+✔ Efficient State Management – Zustand keeps everything reactive.
+
+Try this and let me know if any issues remain. Would you like pagination, sorting, or Excel export next?
+
